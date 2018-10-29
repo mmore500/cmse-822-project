@@ -1,6 +1,9 @@
 mainmodule main {
 
   readonly CProxy_Main mainProxy;
+  readonly size_t numElements;
+  readonly size_t gridWidth;
+  readonly size_t gridHeight;
 
   extern module hello;
 

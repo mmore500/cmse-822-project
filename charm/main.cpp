@@ -3,8 +3,10 @@
 #include "main.h"
 #include "hello.decl.h"
 
-/* readonly */
-CProxy_Main mainProxy;
+/* readonly */ CProxy_Main mainProxy;
+/* readonly */ size_t numElements;
+/* readonly */ size_t gridWidth;
+/* readonly */ size_t gridHeight;
 
 // entry point of Charm++ application
 Main::Main(CkArgMsg* msg) {
@@ -14,7 +16,9 @@ Main::Main(CkArgMsg* msg) {
 
   // if a command line argument is supplied,
   // it is the number of chares to create.
-  numElements = (msg->argc > 1) ? atoi(msg->argv[1]) : 5;
+  gridWidth = (msg->argc > 2) ? atoi(msg->argv[1]) : 5;
+  gridHeight = (msg->argc > 2) ? atoi(msg->argv[2]) : 5;
+  numElements = gridWidth * gridHeight;
 
   // done with message, delete it
   delete msg;
@@ -24,7 +28,7 @@ Main::Main(CkArgMsg* msg) {
             "using %d processors.\n",
             numElements, CkNumPes());
 
-  // set the mainProxy reawdonly to point
+  // set the mainProxy readonly to point
   // to a proxy for the Main chare object
   // (i.e., this chare object)
   mainProxy = thisProxy;
@@ -32,9 +36,9 @@ Main::Main(CkArgMsg* msg) {
   // create the array of Hello chare objects
   CProxy_Hello helloArray = CProxy_Hello::ckNew(numElements);
 
-  // invoke the sayHi() entry method on all of the
+  // invoke the sendTaps() entry method on all of the
   // elements in the helloArray array of chare objects
-  helloArray.sayHi(-1);
+  helloArray.sendTaps();
 
 }
 
@@ -47,7 +51,7 @@ void Main::done() {
   ++doneCount;
 
   // otherwise, keep waiting
-  if (doneCount >= numElements) CkExit();
+  if (doneCount >= 4*numElements) CkExit();
 }
 
 #include "main.def.h"

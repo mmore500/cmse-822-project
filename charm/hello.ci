@@ -2,7 +2,8 @@ module hello {
 
   array [1D] Hello {
     entry Hello();
-    entry void sayHi(int);
+    entry void sendTaps();
+    entry void takeTap(size_t from_x, size_t from_y, size_t to_direction);
     };
 
 };

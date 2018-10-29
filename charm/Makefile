@@ -24,13 +24,13 @@ clean:
 	rm -f hello.decl.h hello.def.h hello.o
 	rm -f hello charmrun
 
-localrun:
-	./charmrun +p4 ./hello 10
+localrun: clean hello
+	./charmrun +p4 ./hello 5 5
 
-remoterun: clean
-	./charmrun ++mpiexec +p10 ./hello 10
+remoterun: clean hello
+	./charmrun ++mpiexec +p10 ./hello 5 5
 
-send:
+send: clean
 	cd .. && ./rsync.sh
 
 .PHONY: clean send
