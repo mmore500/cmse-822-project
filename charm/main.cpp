@@ -38,7 +38,7 @@ Main::Main(CkArgMsg* msg) {
 
   // invoke the sendTaps() entry method on all of the
   // elements in the helloArray array of chare objects
-  helloArray.sendTaps();
+  helloArray.sendTaps(5);
 
 }
 

@@ -43,17 +43,21 @@ Hello::Hello() {
 // constructor for migration
 Hello::Hello(CkMigrateMessage *msg) {}
 
-void Hello::sendTaps() {
+void Hello::sendTaps(size_t delay) {
 
   // have this chare object say hello
   CkPrintf("Sending taps from chare # %d on "
-            "processor %d.\n",
-            thisIndex, CkMyPe());
+            "processor %d with delay %lu.\n",
+            thisIndex, CkMyPe(), delay);
 
-  for (size_t i = 0; i < NUM_NEIGHBORS; ++i) {
-    neighbors[i].takeTap(my_x, my_y, i);
+  if (delay) {
+    thisProxy[thisIndex].sendTaps(--delay);
+  } else {
+
+    for (size_t i = 0; i < NUM_NEIGHBORS; ++i) {
+      neighbors[i].takeTap(my_x, my_y, i);
+    }
   }
-
 }
 
 void Hello::takeTap(size_t from_x, size_t from_y, size_t to_direction) {

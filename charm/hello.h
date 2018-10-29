@@ -24,7 +24,7 @@ public:
   Hello(CkMigrateMessage *msg);
 
   /* Entry Methods */
-  void sendTaps();
+  void sendTaps(size_t delay);
   void takeTap(size_t from_x, size_t from_y, size_t to_direction);
 
 };
