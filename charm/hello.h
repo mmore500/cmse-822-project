@@ -17,6 +17,12 @@ private:
   size_t my_x;
   size_t my_y;
 
+  double timestamp;
+  double startTime;
+
+  std::default_random_engine generator;
+  std::exponential_distribution<double> distribution;
+
 public:
 
   /* Constructors */
@@ -24,8 +30,8 @@ public:
   Hello(CkMigrateMessage *msg);
 
   /* Entry Methods */
-  void sendTaps(size_t delay);
-  void takeTap(size_t from_x, size_t from_y, size_t to_direction);
+  void loop();
+  void takeTap(size_t diameter, size_t to_direction);
 
 };
 

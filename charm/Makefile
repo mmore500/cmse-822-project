@@ -25,10 +25,10 @@ clean:
 	rm -f hello charmrun
 
 localrun: clean hello
-	./charmrun +p4 ./hello 5 5
+	./charmrun +p4 ./hello 2 2
 
 remoterun: clean hello
-	./charmrun ++mpiexec +p10 ./hello 5 5
+	./charmrun ++mpiexec +p36 ./hello 6 6
 
 send: clean
 	cd .. && ./rsync.sh

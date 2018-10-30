@@ -7,6 +7,8 @@
 /* readonly */ size_t numElements;
 /* readonly */ size_t gridWidth;
 /* readonly */ size_t gridHeight;
+/* readonly */ double duration;
+/* readonly */ size_t diameter;
 
 // entry point of Charm++ application
 Main::Main(CkArgMsg* msg) {
@@ -19,6 +21,9 @@ Main::Main(CkArgMsg* msg) {
   gridWidth = (msg->argc > 2) ? atoi(msg->argv[1]) : 5;
   gridHeight = (msg->argc > 2) ? atoi(msg->argv[2]) : 5;
   numElements = gridWidth * gridHeight;
+  duration = (msg->argc > 3) ? atoi(msg->argv[3]) : 15;
+
+  diameter = 2;
 
   // done with message, delete it
   delete msg;
@@ -36,9 +41,9 @@ Main::Main(CkArgMsg* msg) {
   // create the array of Hello chare objects
   CProxy_Hello helloArray = CProxy_Hello::ckNew(numElements);
 
-  // invoke the sendTaps() entry method on all of the
+  // invoke the loop() entry method on all of the
   // elements in the helloArray array of chare objects
-  helloArray.sendTaps(5);
+  helloArray.loop();
 
 }
 
@@ -51,7 +56,7 @@ void Main::done() {
   ++doneCount;
 
   // otherwise, keep waiting
-  if (doneCount >= 4*numElements) CkExit();
+  if (doneCount >= numElements) CkExit();
 }
 
 #include "main.def.h"

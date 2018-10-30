@@ -1,4 +1,6 @@
 #include <vector>
+#include <iostream>
+#include <random>
 
 #include "hello.decl.h"
 
@@ -9,10 +11,16 @@ extern /* readonly */ CProxy_Main mainProxy;
 extern /* readonly */ size_t numElements;
 extern /* readonly */ size_t gridWidth;
 extern /* readonly */ size_t gridHeight;
+extern /* readonly */ size_t diameter;
+extern /* readonly */ double duration;
 
 Hello::Hello() {
 
+  distribution = std::exponential_distribution<double>(0.08);
+
   channel = 0;
+  timestamp = CkWallTimer();
+  startTime = CkWallTimer();
 
   my_x = thisIndex % gridWidth;
   my_y = thisIndex / gridWidth;
@@ -43,32 +51,57 @@ Hello::Hello() {
 // constructor for migration
 Hello::Hello(CkMigrateMessage *msg) {}
 
-void Hello::sendTaps(size_t delay) {
+void Hello::loop() {
 
-  // have this chare object say hello
-  CkPrintf("Sending taps from chare # %d on "
-            "processor %d with delay %lu.\n",
-            thisIndex, CkMyPe(), delay);
 
-  if (delay) {
-    thisProxy[thisIndex].sendTaps(--delay);
-  } else {
+  double current = CkWallTimer();
 
-    for (size_t i = 0; i < NUM_NEIGHBORS; ++i) {
-      neighbors[i].takeTap(my_x, my_y, i);
-    }
+  if (current - startTime > duration) {
+    mainProxy.done();
+    return;
   }
+
+  double elapsed = current - timestamp;
+  // CkPrintf("%f, %f\n",
+  //           current-startTime, elapsed);
+
+
+  if (!elapsed) {
+    thisProxy[thisIndex].loop();
+    return;
+  } else {
+    timestamp = current;
+  }
+
+  for (double draw = distribution(generator);
+      draw < elapsed;
+      elapsed -= draw, draw = distribution(generator)
+    ) {
+
+    CkPrintf("hit!\n");
+    for (size_t i = 0; i < NUM_NEIGHBORS; ++i) {
+      neighbors[i].takeTap(diameter, i);
+    }
+
+  }
+
+  thisProxy[thisIndex].loop();
+
 }
 
-void Hello::takeTap(size_t from_x, size_t from_y, size_t to_direction) {
+void Hello::takeTap(size_t diam, size_t to_direction) {
 
-  // have this chare object report a tap
-  CkPrintf("%lu, %lu reporting tap from %lu,%lu to direction %lu.\n",
-            my_x, my_y, from_x, from_y, to_direction);
+  // CkPrintf("tap %lu %lu\n",diam, to_direction);
 
-  // report to the Main chare object that this chare object
-  // has completed its task
-  mainProxy.done();
+  if (diam > 0) {
+    if (to_direction == NORTH || to_direction == SOUTH) {
+      neighbors[EAST].takeTap(diam-1, EAST);
+      neighbors[WEST].takeTap(diam-1, WEST);
+    }
+
+    neighbors[to_direction].takeTap(diam-1, to_direction);
+
+  }
 
 }
 
