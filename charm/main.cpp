@@ -1,7 +1,7 @@
 #include "main.decl.h"
 
 #include "main.h"
-#include "hello.decl.h"
+#include "tile.decl.h"
 
 /* readonly */ CProxy_Main mainProxy;
 /* readonly */ size_t numElements;
@@ -32,7 +32,7 @@ Main::Main(CkArgMsg* msg) {
   delete msg;
 
   // display info about this execution
-  CkPrintf("Running Hello World with %d elements "
+  CkPrintf("Running Tile World with %d elements "
             "using %d processors.\n",
             numElements, CkNumPes());
 
@@ -41,12 +41,12 @@ Main::Main(CkArgMsg* msg) {
   // (i.e., this chare object)
   mainProxy = thisProxy;
 
-  // create the array of Hello chare objects
-  CProxy_Hello helloArray = CProxy_Hello::ckNew(numElements);
+  // create the array of Tile chare objects
+  CProxy_Tile tileArray = CProxy_Tile::ckNew(numElements);
 
   // invoke the loop() entry method on all of the
-  // elements in the helloArray array of chare objects
-  helloArray.loop();
+  // elements in the tileArray array of chare objects
+  tileArray.loop();
 
 }
 

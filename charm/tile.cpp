@@ -5,9 +5,9 @@
 #include <algorithm>
 #include <cstddef>
 
-#include "hello.decl.h"
+#include "tile.decl.h"
 
-#include "hello.h"
+#include "tile.h"
 #include "main.decl.h"
 
 extern /* readonly */ CProxy_Main mainProxy;
@@ -19,7 +19,7 @@ extern /* readonly */ double duration;
 extern /* readonly */ double reward;
 extern /* readonly */ double penalty;
 
-Hello::Hello() {
+Tile::Tile() {
 
   exponential_distribution = std::exponential_distribution<double>(0.08);
   uniform_distribution = std::uniform_int_distribution<size_t>(0,std::numeric_limits<size_t>::max());
@@ -51,7 +51,7 @@ Hello::Hello() {
     (my_x + gridWidth - 1) % gridWidth
     + my_y * gridWidth);
 
-    neighbors = CProxySection_Hello::ckNew(thisProxy, neighbor_idxs);
+    neighbors = CProxySection_Tile::ckNew(thisProxy, neighbor_idxs);
 
   cur_set = new std::unordered_set<size_t>();
   bak_set = new std::unordered_set<size_t>();
@@ -59,9 +59,9 @@ Hello::Hello() {
 }
 
 // constructor for migration
-Hello::Hello(CkMigrateMessage *msg) {}
+Tile::Tile(CkMigrateMessage *msg) {}
 
-void Hello::loop() {
+void Tile::loop() {
 
 
   double current = CkWallTimer();
@@ -108,7 +108,7 @@ void Hello::loop() {
 
 }
 
-void Hello::takeTap(size_t diam, size_t to_direction, size_t from_channel, size_t event_id) {
+void Tile::takeTap(size_t diam, size_t to_direction, size_t from_channel, size_t event_id) {
 
   // CkPrintf("tap %lu %lu\n",diam, to_direction);
   if (
@@ -132,4 +132,4 @@ void Hello::takeTap(size_t diam, size_t to_direction, size_t from_channel, size_
 
 }
 
-#include "hello.def.h"
+#include "tile.def.h"

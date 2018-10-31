@@ -1,7 +1,7 @@
 #ifndef __HELLO_H__
 #define __HELLO_H__
 
-class Hello : public CBase_Hello {
+class Tile : public CBase_Tile {
 
 private:
   const size_t NORTH = 0;
@@ -11,7 +11,7 @@ private:
 
   const size_t NUM_NEIGHBORS = 4;
 
-  CProxySection_Hello neighbors;
+  CProxySection_Tile neighbors;
   size_t channel;
 
   size_t my_x;
@@ -35,8 +35,8 @@ private:
 public:
 
   /* Constructors */
-  Hello();
-  Hello(CkMigrateMessage *msg);
+  Tile();
+  Tile(CkMigrateMessage *msg);
 
   /* Entry Methods */
   void loop();

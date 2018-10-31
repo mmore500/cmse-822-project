@@ -2,33 +2,33 @@ CHARMDIR = ../../charm/
 CHARMC = $(CHARMDIR)/bin/charmc $(OPTS)
 
 default : all
-all : hello
+all : tile
 
-hello : main.o hello.o
-	$(CHARMC) -language charm++ -o hello main.o hello.o
+tile : main.o tile.o
+	$(CHARMC) -language charm++ -o tile main.o tile.o
 
-main.o : main.cpp main.h main.decl.h main.def.h hello.decl.h
+main.o : main.cpp main.h main.decl.h main.def.h tile.decl.h
 	$(CHARMC) -o main.o main.cpp
 
 main.decl.h main.def.h : main.ci
 	$(CHARMC) main.ci
 
-hello.o : hello.cpp hello.h hello.decl.h hello.def.h main.decl.h
-	$(CHARMC) -o hello.o hello.cpp
+tile.o : tile.cpp tile.h tile.decl.h tile.def.h main.decl.h
+	$(CHARMC) -o tile.o tile.cpp
 
-hello.decl.h hello.def.h : hello.ci
-	$(CHARMC) hello.ci
+tile.decl.h tile.def.h : tile.ci
+	$(CHARMC) tile.ci
 
 clean:
 	rm -f main.decl.h main.def.h main.o
-	rm -f hello.decl.h hello.def.h hello.o
-	rm -f hello charmrun
+	rm -f tile.decl.h tile.def.h tile.o
+	rm -f tile charmrun
 
-localrun: clean hello
-	./charmrun +p4 ./hello 5 5
+localrun: clean tile
+	./charmrun +p4 ./tile 5 5
 
-remoterun: clean hello
-	./charmrun ++mpiexec +p36 ./hello 6 6
+remoterun: clean tile
+	./charmrun ++mpiexec +p36 ./tile 6 6
 
 send: clean
 	cd .. && ./rsync.sh

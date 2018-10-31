@@ -1,7 +1,7 @@
-module hello {
+module tile {
 
-  array [1D] Hello {
-    entry Hello();
+  array [1D] Tile {
+    entry Tile();
     entry void loop();
     entry [expedited] void takeTap(size_t diameter, size_t to_direction, size_t from_channel, size_t event_id);
     };

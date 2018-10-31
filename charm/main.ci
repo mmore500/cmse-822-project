@@ -9,7 +9,7 @@ mainmodule main {
   readonly double reward;
   readonly double penalty;
 
-  extern module hello;
+  extern module tile;
 
   mainchare Main {
     entry Main(CkArgMsg* msg);
