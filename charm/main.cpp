@@ -9,12 +9,17 @@
 /* readonly */ size_t gridHeight;
 /* readonly */ double duration;
 /* readonly */ size_t diameter;
+/* readonly */ double reward;
+/* readonly */ double penalty;
 
 // entry point of Charm++ application
 Main::Main(CkArgMsg* msg) {
 
   // initialize the local member variables
   doneCount = 0;
+  diameter = 2;
+  reward = 1;
+  penalty = -5;
 
   // if a command line argument is supplied,
   // it is the number of chares to create.
@@ -22,8 +27,6 @@ Main::Main(CkArgMsg* msg) {
   gridHeight = (msg->argc > 2) ? atoi(msg->argv[2]) : 5;
   numElements = gridWidth * gridHeight;
   duration = (msg->argc > 3) ? atoi(msg->argv[3]) : 15;
-
-  diameter = 2;
 
   // done with message, delete it
   delete msg;
@@ -51,12 +54,21 @@ Main::Main(CkArgMsg* msg) {
 Main::Main(CkMigrateMessage* msg) {}
 
 // increment the doneCount
-void Main::done() {
+void Main::done(size_t which, double amount) {
   // if everyone done, exit
   ++doneCount;
 
+  result[which] = amount;
+
   // otherwise, keep waiting
-  if (doneCount >= numElements) CkExit();
+  if (doneCount >= numElements) {
+
+    for (size_t i = 0; i < numElements; ++i) {
+      CkPrintf("%lu %f\n", i, result[i]);
+    }
+
+    CkExit();
+  }
 }
 
 #include "main.def.h"

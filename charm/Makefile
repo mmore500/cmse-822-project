@@ -25,7 +25,7 @@ clean:
 	rm -f hello charmrun
 
 localrun: clean hello
-	./charmrun +p4 ./hello 2 2
+	./charmrun +p4 ./hello 5 5
 
 remoterun: clean hello
 	./charmrun ++mpiexec +p36 ./hello 6 6

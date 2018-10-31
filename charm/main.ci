@@ -6,12 +6,14 @@ mainmodule main {
   readonly size_t gridHeight;
   readonly size_t diameter;
   readonly double duration;
+  readonly double reward;
+  readonly double penalty;
 
   extern module hello;
 
   mainchare Main {
     entry Main(CkArgMsg* msg);
-    entry void done();
+    entry void done(size_t which, double amount);
   };
 
 };

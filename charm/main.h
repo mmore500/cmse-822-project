@@ -8,6 +8,7 @@ class Main : public CBase_Main {
     /* Member Variables */
     // aka Object State
     int doneCount;
+    double result[100];
 
   public:
 
@@ -16,7 +17,7 @@ class Main : public CBase_Main {
     Main(CkMigrateMessage* msg);
 
     /* Entry Methods */
-    void done();
+    void done(size_t which, double amount);
 
 };
 

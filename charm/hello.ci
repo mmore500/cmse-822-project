@@ -3,7 +3,7 @@ module hello {
   array [1D] Hello {
     entry Hello();
     entry void loop();
-    entry [expedited] void takeTap(size_t diameter, size_t to_direction);
+    entry [expedited] void takeTap(size_t diameter, size_t to_direction, size_t from_channel, size_t event_id);
     };
 
 };
