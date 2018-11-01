@@ -7,26 +7,26 @@
 /* readonly */ size_t numElements;
 /* readonly */ size_t gridWidth;
 /* readonly */ size_t gridHeight;
-/* readonly */ double duration;
-/* readonly */ size_t diameter;
-/* readonly */ double reward;
-/* readonly */ double penalty;
+/* readonly */ double runDuration;
+/* readonly */ size_t waveSize;
+/* readonly */ double waveReward;
+/* readonly */ double wavePenalty;
 
 // entry point of Charm++ application
 Main::Main(CkArgMsg* msg) {
 
   // initialize the local member variables
   doneCount = 0;
-  diameter = 2;
-  reward = 1;
-  penalty = -5;
+  waveSize = 2;
+  waveReward = 1;
+  wavePenalty = -5;
 
   // if a command line argument is supplied,
   // it is the number of chares to create.
   gridWidth = (msg->argc > 2) ? atoi(msg->argv[1]) : 5;
   gridHeight = (msg->argc > 2) ? atoi(msg->argv[2]) : 5;
   numElements = gridWidth * gridHeight;
-  duration = (msg->argc > 3) ? atoi(msg->argv[3]) : 15;
+  runDuration = (msg->argc > 3) ? atoi(msg->argv[3]) : 15;
 
   // done with message, delete it
   delete msg;
@@ -44,9 +44,9 @@ Main::Main(CkArgMsg* msg) {
   // create the array of Tile chare objects
   CProxy_Tile tileArray = CProxy_Tile::ckNew(numElements);
 
-  // invoke the loop() entry method on all of the
+  // invoke the seedGen() entry method on all of the
   // elements in the tileArray array of chare objects
-  tileArray.loop();
+  tileArray.seedGen(0.0);
 
 }
 

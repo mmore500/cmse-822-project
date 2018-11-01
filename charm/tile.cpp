@@ -7,6 +7,7 @@
 
 #include "tile.decl.h"
 
+#include "cardinal.h"
 #include "tile.h"
 #include "main.decl.h"
 
@@ -14,121 +15,145 @@ extern /* readonly */ CProxy_Main mainProxy;
 extern /* readonly */ size_t numElements;
 extern /* readonly */ size_t gridWidth;
 extern /* readonly */ size_t gridHeight;
-extern /* readonly */ size_t diameter;
-extern /* readonly */ double duration;
-extern /* readonly */ double reward;
-extern /* readonly */ double penalty;
+extern /* readonly */ size_t waveSize;
+extern /* readonly */ double runDuration;
+extern /* readonly */ double waveReward;
+extern /* readonly */ double wavePenalty;
+
+constexpr Cardi::Dir Cardi::Opp[];
 
 Tile::Tile() {
 
-  exponential_distribution = std::exponential_distribution<double>(0.08);
-  uniform_distribution = std::uniform_int_distribution<size_t>(0,std::numeric_limits<size_t>::max());
+  // set up random number machinery
+  generator.seed(thisIndex);
+  exp_dist = std::exponential_distribution<double>(0.18);
+  uni_dist = std::uniform_int_distribution<size_t>(0,std::numeric_limits<size_t>::max());
 
-  timestamp = CkWallTimer();
-  startTime = CkWallTimer();
-  set_timestamp = CkWallTimer();
+  // who am I?
+  x = thisIndex % gridWidth;
+  y = thisIndex / gridWidth;
 
-  my_x = thisIndex % gridWidth;
-  my_y = thisIndex / gridWidth;
+  channelID = 1 + x / 5 + 100 * (y / 5);
+  CkPrintf("%lu!\n", channelID);
 
-  channel = 1 + my_x / 5 + 100 * (my_y / 5);
+  // set up pointers for cur/bak swapping
+  curSeedIDs = &seedIDSets[0];
+  bakSeedIDs = &seedIDSets[1];
 
-  std::vector<CkArrayIndex> neighbor_idxs(4);
+  // set up neighbors
+  std::vector<CkArrayIndex> neighborIdxs(Cardi::Dir::NumDirs);
 
-  neighbor_idxs[NORTH] = CkArrayIndex(
-    my_x
-    + ((my_y + 1) % gridHeight) * gridWidth);
+  neighborIdxs[Cardi::Dir::SLF] = CkArrayIndex(thisIndex);
 
-  neighbor_idxs[SOUTH] = CkArrayIndex(
-    my_x
-    + ((my_y + gridHeight - 1) % gridHeight) * gridWidth);
+  neighborIdxs[Cardi::Dir::N] = CkArrayIndex(
+    x
+    + ((y + 1) % gridHeight) * gridWidth);
 
-  neighbor_idxs[EAST] = CkArrayIndex(
-    (my_x + 1) % gridWidth
-    + my_y * gridWidth);
+  neighborIdxs[Cardi::Dir::S] = CkArrayIndex(
+    x
+    + ((y + gridHeight - 1) % gridHeight) * gridWidth);
 
-  neighbor_idxs[WEST] = CkArrayIndex(
-    (my_x + gridWidth - 1) % gridWidth
-    + my_y * gridWidth);
+  neighborIdxs[Cardi::Dir::E] = CkArrayIndex(
+    (x + 1) % gridWidth
+    + y * gridWidth);
 
-    neighbors = CProxySection_Tile::ckNew(thisProxy, neighbor_idxs);
+  neighborIdxs[Cardi::Dir::W] = CkArrayIndex(
+    (x + gridWidth - 1) % gridWidth
+    + y * gridWidth);
 
-  cur_set = new std::unordered_set<size_t>();
-  bak_set = new std::unordered_set<size_t>();
+  neighbors = CProxySection_Tile::ckNew(thisProxy, neighborIdxs);
 
 }
 
 // constructor for migration
 Tile::Tile(CkMigrateMessage *msg) {}
 
-void Tile::loop() {
+void Tile::seedGen(double lastSeedGenTime) {
 
+  double curTime = CkWallTimer();
 
-  double current = CkWallTimer();
+  double elapsedTime = curTime - lastSeedGenTime;
 
-  if (current - startTime > duration) {
-    mainProxy.done(thisIndex, stockpile);
-    return;
-  }
+  // no-op if tile dead or no time elapsed
+  if (elapsedTime && channelID) {
 
-  double elapsed = current - timestamp;
-  // CkPrintf("%f, %f\n",u
-  //           current-startTime, elapsed);
+    // generate as many seed events as appropriate
+    // given elapsed time and whim of RNG
+    for (double draw = exp_dist(generator);
+        draw < elapsedTime;
+        elapsedTime -= draw, draw = exp_dist(generator)
+      )
+    {
 
-  if (!elapsed) {
-    thisProxy[thisIndex].loop();
-    return;
-  } else {
-    timestamp = current;
-  }
+      CkPrintf("seed!\n");
 
-  if (current - set_timestamp > delay) {
-    bak_set->clear();
-    std::swap(bak_set, cur_set);
-  }
+      // draw (probably) unique ID for seed event
+      size_t seedID = uni_dist(generator);
 
-  for (double draw = exponential_distribution(generator);
-      draw < elapsed;
-      elapsed -= draw, draw = exponential_distribution(generator)
-    ) {
+      // send tap everywhere, including self
+      for (size_t neigh = 0; neigh < neighbors.ckGetNumElements(); ++neigh) {
+        neighbors[neigh].takeTap(
+            waveSize,
+            neigh,
+            channelID,
+            seedID
+          );
+      }
 
-    // CkPrintf("hit!\n");
-    for (size_t i = 0; i < NUM_NEIGHBORS; ++i) {
-      if (channel) neighbors[i].takeTap(
-          diameter,
-          i,
-          channel,
-          uniform_distribution(generator)
-        );
     }
 
   }
 
-  thisProxy[thisIndex].loop();
-
+  // if the simulation is over, tell main we're done and stop
+  // otherwise, queue next iteration of loop
+  if (curTime > runDuration) {
+    mainProxy.done(thisIndex, stockpile);
+  } else {
+    thisProxy[thisIndex].seedGen(curTime);
+  }
 }
 
-void Tile::takeTap(size_t diam, size_t to_direction, size_t from_channel, size_t event_id) {
+void Tile::takeTap(
+  size_t waveCountdown,
+  size_t outDirection,
+  size_t channelID,
+  size_t seedID
+) {
 
-  // CkPrintf("tap %lu %lu\n",diam, to_direction);
+  // check if we need to swap curSeedIDs and bakSeedIDs
+  double curTime = CkWallTimer();
+  if (curTime - lastSetSwapTime > setSwapDelay) {
+    lastSetSwapTime = curTime;
+    bakSeedIDs->clear();
+    std::swap(curSeedIDs, bakSeedIDs);
+  }
+
   if (
-      cur_set->find(from_channel) != cur_set->end() ||
-      bak_set->find(from_channel) != bak_set->end() ||
-      (channel && from_channel != channel))
-    {
-    return;
+      this->channelID && // dead cells no propagate
+      this->channelID == channelID && // only propagate if channels match
+      curSeedIDs->find(seedID) == curSeedIDs->end() && // don't propagate ...
+      bakSeedIDs->find(seedID) == bakSeedIDs->end() // ... if quiescent
+    )
+  {
+    CkPrintf("tap!\n", stockpile);
+    stockpile += waveCountdown ? waveReward : wavePenalty;
+    curSeedIDs->insert(seedID);
+
+
+    for (size_t neigh = 0; neigh < neighbors.ckGetNumElements(); ++neigh) {
+      // if not the sender or self
+      if (neigh == Cardi::Opp[outDirection] || neigh == Cardi::Dir::SLF) continue;
+
+      // ... then forward the tap
+      neighbors[neigh].takeTap(
+          waveCountdown ? waveCountdown-1 : waveCountdown,
+          neigh,
+          channelID,
+          seedID
+        );
+    }
+
   }
-
-  // CkPrintf("%f!\n", stockpile);
-  stockpile += diam ? reward : penalty;
-  cur_set->insert(event_id);
-
-  if (to_direction == NORTH || to_direction == SOUTH) {
-    neighbors[EAST].takeTap(diam ? diam-1 : diam, EAST, channel, event_id);
-    neighbors[WEST].takeTap(diam ? diam-1 : diam, WEST, channel, event_id);
-  }
-
-  neighbors[to_direction].takeTap(diam ? diam-1 : diam, to_direction, channel, event_id);
 
 }
 

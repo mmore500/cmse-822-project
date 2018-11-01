@@ -4,33 +4,26 @@
 class Tile : public CBase_Tile {
 
 private:
-  const size_t NORTH = 0;
-  const size_t SOUTH = 1;
-  const size_t EAST = 2;
-  const size_t WEST = 3;
-
-  const size_t NUM_NEIGHBORS = 4;
 
   CProxySection_Tile neighbors;
-  size_t channel;
 
-  size_t my_x;
-  size_t my_y;
+  size_t channelID;
 
-  double timestamp;
-  double startTime;
+  size_t x;
+  size_t y;
 
-  std::default_random_engine generator;
-  std::exponential_distribution<double> exponential_distribution;
-  std::uniform_int_distribution<size_t> uniform_distribution;
+  std::mt19937 generator;
+  std::exponential_distribution<double> exp_dist;
+  std::uniform_int_distribution<size_t> uni_dist;
   double stockpile = 0.0;
 
-  double delay = 5.0;
 
-  double set_timestamp;
+  double setSwapDelay = 5.0;
+  double lastSetSwapTime = 0.0;
 
-  std::unordered_set<size_t> *cur_set;
-  std::unordered_set<size_t> *bak_set;
+  std::unordered_set<size_t> seedIDSets[2];
+  std::unordered_set<size_t> *curSeedIDs;
+  std::unordered_set<size_t> *bakSeedIDs;
 
 public:
 
@@ -39,8 +32,13 @@ public:
   Tile(CkMigrateMessage *msg);
 
   /* Entry Methods */
-  void loop();
-  void takeTap(size_t diameter, size_t to_direction, size_t from_channel, size_t event_id);
+  void seedGen(double lastSeedGenTime);
+  void takeTap(
+      size_t waveCountdown,
+      size_t outDirection,
+      size_t channelID,
+      size_t event_id
+    );
 
 };
 

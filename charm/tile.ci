@@ -2,8 +2,13 @@ module tile {
 
   array [1D] Tile {
     entry Tile();
-    entry void loop();
-    entry [expedited] void takeTap(size_t diameter, size_t to_direction, size_t from_channel, size_t event_id);
+    entry void seedGen(double lastSeedGenTime);
+    entry [expedited] void takeTap(
+        size_t waveCountdown,
+        size_t outDirection,
+        size_t channelID,
+        size_t seedID
+      );
     };
 
 };
