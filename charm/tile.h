@@ -1,5 +1,5 @@
-#ifndef __HELLO_H__
-#define __HELLO_H__
+#ifndef __TILE_H__
+#define __TILE_H__
 
 class Tile : public CBase_Tile {
 
@@ -46,4 +46,4 @@ public:
 
 };
 
-#endif //__HELLO_H__
+#endif //__TILE_H__
