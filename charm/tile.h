@@ -21,7 +21,6 @@ private:
   double stockpile = 0.0;
 
   /* Manage quiescent period */
-  double setSwapDelay = 5.0; // in seconds
   double lastSetSwapTime = 0.0; // in seconds
 
   std::unordered_set<size_t> seedIDSets[2];

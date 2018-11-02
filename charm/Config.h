@@ -9,7 +9,8 @@ EMP_BUILD_CONFIG(Config,
   VALUE(GRID_HEIGHT, size_t, 11, "How tall is the World?"),
 
   GROUP(RUN_STRUCTURE, "How should the run be setup?"),
-  VALUE(RUN_DURATION, double, 15, "How long should a run last (seconds)?"),
+  VALUE(RUN_DURATION, double, 15.0, "How long should a run last (seconds)?"),
+  VALUE(WAVE_DURATION, double, 5.0, "At most, how long should a wave last (seconds)?"),
 
   GROUP(RESOURCE_STRUCTURE, "How should resources be setup?"),
   VALUE(WAVE_SIZE, double, 2.0, "What radius should resource waves be good in?"),

@@ -16,6 +16,7 @@
 
 /* RUN_STRUCTURE */
 /* readonly */ double RUN_DURATION;
+/* readonly */ double WAVE_DURATION;
 
 /* RESOURCE_STRUCTURE */
 /* readonly */ double WAVE_SIZE;
@@ -39,6 +40,7 @@ Main::Main(CkArgMsg* msg) {
 
   /* RUN_STRUCTURE */
   RUN_DURATION = config.RUN_DURATION();
+  WAVE_DURATION = config.WAVE_DURATION();
 
   /* RESOURCE_STRUCTURE */
   WAVE_SIZE = config.WAVE_SIZE();

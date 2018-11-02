@@ -20,6 +20,7 @@ extern /* readonly */ size_t GRID_HEIGHT;
 
 /* RUN_STRUCTURE */
 extern /* readonly */ double RUN_DURATION;
+extern /* readonly */ double WAVE_DURATION;
 
 /* RESOURCE_STRUCTURE */
 extern /* readonly */ double WAVE_SIZE;
@@ -140,7 +141,7 @@ void Tile::takeTap(
 
   // check if we need to swap curSeedIDs and bakSeedIDs
   double curTime = CkWallTimer();
-  if (curTime - lastSetSwapTime > setSwapDelay) {
+  if (curTime - lastSetSwapTime > WAVE_DURATION) {
     lastSetSwapTime = curTime;
     bakSeedIDs->clear();
     std::swap(curSeedIDs, bakSeedIDs);
@@ -151,7 +152,7 @@ void Tile::takeTap(
       this->channelID == channelID && // only propagate if channels match
       curSeedIDs->find(seedID) == curSeedIDs->end() && // only propagate ...
       bakSeedIDs->find(seedID) == bakSeedIDs->end() && // ... if not quiescent
-      curTime - firstTapTime < setSwapDelay // could outlast quiescence, kill
+      curTime - firstTapTime < WAVE_DURATION // could outlast quiescence, kill
     )
   {
 

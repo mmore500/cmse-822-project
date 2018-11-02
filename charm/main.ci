@@ -6,6 +6,7 @@ mainmodule main {
 
   /* RUN_STRUCTURE */
   readonly double RUN_DURATION;
+  readonly double WAVE_DURATION;
 
   /* RESOURCE_STRUCTURE */
   readonly double WAVE_SIZE;
