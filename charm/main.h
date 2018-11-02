@@ -7,7 +7,8 @@ class Main : public CBase_Main {
 
     /* Member Variables */
     // aka Object State
-    int doneCount;
+    size_t doneCount;
+    size_t numElements;
     double result[100];
 
   public:

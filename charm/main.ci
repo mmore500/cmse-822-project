@@ -1,13 +1,16 @@
 mainmodule main {
 
   readonly CProxy_Main mainProxy;
-  readonly size_t numElements;
-  readonly size_t gridWidth;
-  readonly size_t gridHeight;
-  readonly double waveSize;
-  readonly double runDuration;
-  readonly double waveReward;
-  readonly double wavePenalty;
+  readonly size_t GRID_WIDTH;
+  readonly size_t GRID_HEIGHT;
+
+  /* RUN_STRUCTURE */
+  readonly double RUN_DURATION;
+
+  /* RESOURCE_STRUCTURE */
+  readonly double WAVE_SIZE;
+  readonly double WAVE_REWARD;
+  readonly double WAVE_PENALTY;
 
   extern module tile;
 

@@ -1,5 +1,9 @@
+EMP_DIR := ../../Empirical/source
+CFLAGS_all := -Wall -Wno-unused-function -std=c++14 -I$(EMP_DIR)/
+CFLAGS_nat := -O3 -DNDEBUG $(CFLAGS_all)
+
 CHARMDIR = ../../charm/
-CHARMC = $(CHARMDIR)/bin/charmc $(OPTS)
+CHARMC = $(CHARMDIR)/bin/charmc $(OPTS) -c++ gcc $(CFLAGS_nat) -std=c++14
 
 default : all
 all : tile
@@ -25,10 +29,10 @@ clean:
 	rm -f tile charmrun
 
 localrun: clean tile
-	./charmrun +p4 ./tile 11 11
+	./charmrun +p4 ./tile
 
 remoterun: clean tile
-	./charmrun ++mpiexec +p36 ./tile 11 11
+	./charmrun ++mpiexec +p36 ./tile
 
 send: clean
 	cd .. && ./rsync.sh

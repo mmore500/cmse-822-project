@@ -1,35 +1,56 @@
 #include "main.decl.h"
 
+#include "config/command_line.h"
+#include "config/ArgManager.h"
+
+#include "Config.h"
+
 #include "main.h"
 #include "tile.decl.h"
 
 /* readonly */ CProxy_Main mainProxy;
-/* readonly */ size_t numElements;
-/* readonly */ size_t gridWidth;
-/* readonly */ size_t gridHeight;
-/* readonly */ double runDuration;
-/* readonly */ double waveSize;
-/* readonly */ double waveReward;
-/* readonly */ double wavePenalty;
+
+/* WORLD_STRUCTURE */
+/* reqdonly */ size_t GRID_WIDTH;
+/* readonly */ size_t GRID_HEIGHT;
+
+/* RUN_STRUCTURE */
+/* readonly */ double RUN_DURATION;
+
+/* RESOURCE_STRUCTURE */
+/* readonly */ double WAVE_SIZE;
+/* readonly */ double WAVE_REWARD;
+/* readonly */ double WAVE_PENALTY;
 
 // entry point of Charm++ application
 Main::Main(CkArgMsg* msg) {
 
-  // initialize the local member variables
-  doneCount = 0;
-  waveSize = 2.0;
-  waveReward = 1;
-  wavePenalty = -5;
+  Config config;
 
-  // if a command line argument is supplied,
-  // it is the number of chares to create.
-  gridWidth = (msg->argc > 2) ? atoi(msg->argv[1]) : 5;
-  gridHeight = (msg->argc > 2) ? atoi(msg->argv[2]) : 5;
-  numElements = gridWidth * gridHeight;
-  runDuration = (msg->argc > 3) ? atoi(msg->argv[3]) : 15;
+  config.Read("Config.cfg", false);
+  auto args = emp::cl::ArgManager(msg->argc, msg->argv);
+
+  if (args.ProcessConfigOptions(config, std::cout, "OpenWorld.cfg", "OpenWorld-macros.h") == false) CkExit();
+  if (args.TestUnknown() == false) CkExit();  // If there are leftover args, throw an error.
+
+  /* WORLD_STRUCTURE */
+  GRID_WIDTH = config.GRID_WIDTH();
+  GRID_HEIGHT = config.GRID_HEIGHT();
+
+  /* RUN_STRUCTURE */
+  RUN_DURATION = config.RUN_DURATION();
+
+  /* RESOURCE_STRUCTURE */
+  WAVE_SIZE = config.WAVE_SIZE();
+  WAVE_REWARD = config.WAVE_REWARD();
+  WAVE_PENALTY = config.WAVE_PENALTY();
 
   // done with message, delete it
   delete msg;
+
+  // initialize the local member variables
+  doneCount = 0;
+  numElements = config.GRID_WIDTH() * config.GRID_HEIGHT();
 
   // display info about this execution
   CkPrintf("Running Tile World with %d elements "

@@ -13,13 +13,18 @@
 #include "main.decl.h"
 
 extern /* readonly */ CProxy_Main mainProxy;
-extern /* readonly */ size_t numElements;
-extern /* readonly */ size_t gridWidth;
-extern /* readonly */ size_t gridHeight;
-extern /* readonly */ double waveSize;
-extern /* readonly */ double runDuration;
-extern /* readonly */ double waveReward;
-extern /* readonly */ double wavePenalty;
+
+/* WORLD_STRUCTURE */
+extern /* readonly */ size_t GRID_WIDTH;
+extern /* readonly */ size_t GRID_HEIGHT;
+
+/* RUN_STRUCTURE */
+extern /* readonly */ double RUN_DURATION;
+
+/* RESOURCE_STRUCTURE */
+extern /* readonly */ double WAVE_SIZE;
+extern /* readonly */ double WAVE_REWARD;
+extern /* readonly */ double WAVE_PENALTY;
 
 // RE: cardinal directions
 // necessary for successful compile
@@ -34,8 +39,8 @@ Tile::Tile() {
   uni_dist = std::uniform_int_distribution<size_t>(0,std::numeric_limits<size_t>::max());
 
   // who am I?
-  x = thisIndex % gridWidth;
-  y = thisIndex / gridWidth;
+  x = thisIndex % GRID_WIDTH;
+  y = thisIndex / GRID_WIDTH;
 
   // TODO temporary hack for testing purposes
   channelID = 1 + x / 5 + 100 * (y / 5);
@@ -51,19 +56,19 @@ Tile::Tile() {
 
   neighborIdxs[Cardi::Dir::N] = CkArrayIndex(
     x
-    + ((y + 1) % gridHeight) * gridWidth);
+    + ((y + 1) % GRID_HEIGHT) * GRID_WIDTH);
 
   neighborIdxs[Cardi::Dir::S] = CkArrayIndex(
     x
-    + ((y + gridHeight - 1) % gridHeight) * gridWidth);
+    + ((y + GRID_HEIGHT - 1) % GRID_HEIGHT) * GRID_WIDTH);
 
   neighborIdxs[Cardi::Dir::E] = CkArrayIndex(
-    (x + 1) % gridWidth
-    + y * gridWidth);
+    (x + 1) % GRID_WIDTH
+    + y * GRID_WIDTH);
 
   neighborIdxs[Cardi::Dir::W] = CkArrayIndex(
-    (x + gridWidth - 1) % gridWidth
-    + y * gridWidth);
+    (x + GRID_WIDTH - 1) % GRID_WIDTH
+    + y * GRID_WIDTH);
 
   neighbors = CProxySection_Tile::ckNew(thisProxy, neighborIdxs);
 
@@ -113,7 +118,7 @@ void Tile::seedGen(double lastSeedGenTime) {
 
   // if the simulation is over, tell main we're done and stop
   // otherwise, queue next iteration of wave seeding loop
-  if (curTime > runDuration) {
+  if (curTime > RUN_DURATION) {
     mainProxy.done(thisIndex, stockpile);
   } else {
     thisProxy[thisIndex].seedGen(curTime);
@@ -151,8 +156,8 @@ void Tile::takeTap(
   {
 
     // register wave efefct on resource stockpile
-    double d = distance(x, y, firstTapX, firstTapY, gridWidth, gridHeight);
-    stockpile += d <= waveSize ? waveReward : wavePenalty;
+    double d = distance(x, y, firstTapX, firstTapY, GRID_WIDTH, GRID_HEIGHT);
+    stockpile += d <= WAVE_SIZE ? WAVE_REWARD : WAVE_PENALTY;
 
     // enter quiescence for this particular wave
     curSeedIDs->insert(seedID);
