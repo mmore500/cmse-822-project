@@ -8,6 +8,7 @@
 #include "tile.decl.h"
 
 #include "cardinal.h"
+#include "distance.h"
 #include "tile.h"
 #include "main.decl.h"
 
@@ -15,13 +16,16 @@ extern /* readonly */ CProxy_Main mainProxy;
 extern /* readonly */ size_t numElements;
 extern /* readonly */ size_t gridWidth;
 extern /* readonly */ size_t gridHeight;
-extern /* readonly */ size_t waveSize;
+extern /* readonly */ double waveSize;
 extern /* readonly */ double runDuration;
 extern /* readonly */ double waveReward;
 extern /* readonly */ double wavePenalty;
 
+// RE: cardinal directions
+// necessary for successful compile
 constexpr Cardi::Dir Cardi::Opp[];
 
+/* main constuctor */
 Tile::Tile() {
 
   // set up random number machinery
@@ -33,8 +37,8 @@ Tile::Tile() {
   x = thisIndex % gridWidth;
   y = thisIndex / gridWidth;
 
+  // TODO temporary hack for testing purposes
   channelID = 1 + x / 5 + 100 * (y / 5);
-  CkPrintf("%lu!\n", channelID);
 
   // set up pointers for cur/bak swapping
   curSeedIDs = &seedIDSets[0];
@@ -65,9 +69,10 @@ Tile::Tile() {
 
 }
 
-// constructor for migration
-Tile::Tile(CkMigrateMessage *msg) {}
+/* constructor for migration */
+Tile::Tile(CkMigrateMessage *msg) {/* TODO */}
 
+/* Seed resource waves */
 void Tile::seedGen(double lastSeedGenTime) {
 
   double curTime = CkWallTimer();
@@ -77,15 +82,15 @@ void Tile::seedGen(double lastSeedGenTime) {
   // no-op if tile dead or no time elapsed
   if (elapsedTime && channelID) {
 
-    // generate as many seed events as appropriate
-    // given elapsed time and whim of RNG
+    // generate as many seed events as appropriate ...
+    // ... given elapsed time and whim of RNG
     for (double draw = exp_dist(generator);
         draw < elapsedTime;
         elapsedTime -= draw, draw = exp_dist(generator)
       )
     {
 
-      CkPrintf("seed!\n");
+      // CkPrintf("seed!\n");
 
       // draw (probably) unique ID for seed event
       size_t seedID = uni_dist(generator);
@@ -93,7 +98,9 @@ void Tile::seedGen(double lastSeedGenTime) {
       // send tap everywhere, including self
       for (size_t neigh = 0; neigh < neighbors.ckGetNumElements(); ++neigh) {
         neighbors[neigh].takeTap(
-            waveSize,
+            curTime,
+            x,
+            y,
             neigh,
             channelID,
             seedID
@@ -105,16 +112,22 @@ void Tile::seedGen(double lastSeedGenTime) {
   }
 
   // if the simulation is over, tell main we're done and stop
-  // otherwise, queue next iteration of loop
+  // otherwise, queue next iteration of wave seeding loop
   if (curTime > runDuration) {
     mainProxy.done(thisIndex, stockpile);
   } else {
     thisProxy[thisIndex].seedGen(curTime);
   }
+
 }
 
+/*
+ * Resource wave propagation.
+ */
 void Tile::takeTap(
-  size_t waveCountdown,
+  double firstTapTime,
+  size_t firstTapX,
+  size_t firstTapY,
   size_t outDirection,
   size_t channelID,
   size_t seedID
@@ -129,24 +142,33 @@ void Tile::takeTap(
   }
 
   if (
-      this->channelID && // dead cells no propagate
+      this->channelID && // only propagate if not dead
       this->channelID == channelID && // only propagate if channels match
-      curSeedIDs->find(seedID) == curSeedIDs->end() && // don't propagate ...
-      bakSeedIDs->find(seedID) == bakSeedIDs->end() // ... if quiescent
+      curSeedIDs->find(seedID) == curSeedIDs->end() && // only propagate ...
+      bakSeedIDs->find(seedID) == bakSeedIDs->end() && // ... if not quiescent
+      curTime - firstTapTime < setSwapDelay // could outlast quiescence, kill
     )
   {
-    CkPrintf("tap!\n", stockpile);
-    stockpile += waveCountdown ? waveReward : wavePenalty;
+
+    // register wave efefct on resource stockpile
+    double d = distance(x, y, firstTapX, firstTapY, gridWidth, gridHeight);
+    stockpile += d <= waveSize ? waveReward : wavePenalty;
+
+    // enter quiescence for this particular wave
     curSeedIDs->insert(seedID);
 
-
+    // propagate wave
     for (size_t neigh = 0; neigh < neighbors.ckGetNumElements(); ++neigh) {
-      // if not the sender or self
-      if (neigh == Cardi::Opp[outDirection] || neigh == Cardi::Dir::SLF) continue;
+      if (
+          neigh == Cardi::Opp[outDirection] || // if the sender ...
+          neigh == Cardi::Dir::SLF // ... or self ...
+        ) continue; // ... then no-op
 
-      // ... then forward the tap
+      // ... otherwise, forward the tap
       neighbors[neigh].takeTap(
-          waveCountdown ? waveCountdown-1 : waveCountdown,
+          firstTapTime,
+          firstTapX,
+          firstTapY,
           neigh,
           channelID,
           seedID

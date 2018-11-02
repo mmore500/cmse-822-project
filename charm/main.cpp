@@ -8,7 +8,7 @@
 /* readonly */ size_t gridWidth;
 /* readonly */ size_t gridHeight;
 /* readonly */ double runDuration;
-/* readonly */ size_t waveSize;
+/* readonly */ double waveSize;
 /* readonly */ double waveReward;
 /* readonly */ double wavePenalty;
 
@@ -17,7 +17,7 @@ Main::Main(CkArgMsg* msg) {
 
   // initialize the local member variables
   doneCount = 0;
-  waveSize = 2;
+  waveSize = 2.0;
   waveReward = 1;
   wavePenalty = -5;
 

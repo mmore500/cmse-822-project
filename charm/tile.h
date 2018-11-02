@@ -7,19 +7,22 @@ private:
 
   CProxySection_Tile neighbors;
 
+  /* Who am I? */
   size_t channelID;
-
   size_t x;
   size_t y;
 
+  /* RNG stuff */
   std::mt19937 generator;
   std::exponential_distribution<double> exp_dist;
   std::uniform_int_distribution<size_t> uni_dist;
+
+  /* Resource collection */
   double stockpile = 0.0;
 
-
-  double setSwapDelay = 5.0;
-  double lastSetSwapTime = 0.0;
+  /* Manage quiescent period */
+  double setSwapDelay = 5.0; // in seconds
+  double lastSetSwapTime = 0.0; // in seconds
 
   std::unordered_set<size_t> seedIDSets[2];
   std::unordered_set<size_t> *curSeedIDs;
@@ -34,10 +37,12 @@ public:
   /* Entry Methods */
   void seedGen(double lastSeedGenTime);
   void takeTap(
-      size_t waveCountdown,
+      double firstTapTime,
+      size_t firstTapX,
+      size_t firstTapY,
       size_t outDirection,
       size_t channelID,
-      size_t event_id
+      size_t seedID
     );
 
 };

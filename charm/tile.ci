@@ -4,7 +4,9 @@ module tile {
     entry Tile();
     entry void seedGen(double lastSeedGenTime);
     entry [expedited] void takeTap(
-        size_t waveCountdown,
+        double firstTapTime,
+        size_t firstTapX,
+        size_t firstTapY,
         size_t outDirection,
         size_t channelID,
         size_t seedID

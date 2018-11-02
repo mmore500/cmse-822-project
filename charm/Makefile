@@ -25,10 +25,10 @@ clean:
 	rm -f tile charmrun
 
 localrun: clean tile
-	./charmrun +p4 ./tile 6 6
+	./charmrun +p4 ./tile 11 11
 
 remoterun: clean tile
-	./charmrun ++mpiexec +p36 ./tile 6 6
+	./charmrun ++mpiexec +p36 ./tile 11 11
 
 send: clean
 	cd .. && ./rsync.sh

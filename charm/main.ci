@@ -4,7 +4,7 @@ mainmodule main {
   readonly size_t numElements;
   readonly size_t gridWidth;
   readonly size_t gridHeight;
-  readonly size_t waveSize;
+  readonly double waveSize;
   readonly double runDuration;
   readonly double waveReward;
   readonly double wavePenalty;
