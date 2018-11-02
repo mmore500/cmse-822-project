@@ -1,9 +1,9 @@
 EMP_DIR := ../../Empirical/source
-CFLAGS_all := -Wall -Wno-unused-function -std=c++14 -I$(EMP_DIR)/
+CFLAGS_all := -Wall -I$(EMP_DIR)/
 CFLAGS_nat := -O3 -DNDEBUG $(CFLAGS_all)
 
 CHARMDIR = ../../charm/
-CHARMC = $(CHARMDIR)/bin/charmc $(OPTS) -c++ gcc $(CFLAGS_nat) -std=c++14
+CHARMC = $(CHARMDIR)/bin/charmc $(OPTS) -c++ gcc $(CFLAGS_nat)
 
 default : all
 all : tile
