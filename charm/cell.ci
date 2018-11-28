@@ -1,0 +1,9 @@
+module cell {
+
+  array [1D] Cell {
+    entry Cell();
+    entry void updateStockpile(double amount, size_t neighbor);
+    entry void updateChannelID(size_t channelID, size_t neighbor);
+    };
+
+};
