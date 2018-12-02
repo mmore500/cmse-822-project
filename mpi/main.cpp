@@ -6,6 +6,9 @@
 #include <assert.h>
 #include <cmath>
 #include <algorithm>
+#include <string>
+#include <sstream>
+#include "H5Cpp.h"
 
 #include "config/command_line.h"
 #include "config/ArgManager.h"
@@ -156,12 +159,78 @@ int main(int argc, char *argv[])
       signals_bak[i] = -1; // nothing going on
   }
 
+  // set up channel layouts
+  // hardwire data properties
+  // adapted from https://gmsciprog.wordpress.com/2013/08/23/simple-hdf5-for-python-and-c/
+  // and https://support.hdfgroup.org/ftp/HDF5/current/src/unpacked/c++/examples/h5tutr_subset.cpp
+  std::ostringstream oss;
+  oss << "../layouts/" << config.GRID_WIDTH() << "x" << config.GRID_HEIGHT() << ".h5";
+  const H5std_string FILENAME =  oss.str();
+
+  hsize_t h5dims[2];
+	h5dims[0] = config.GRID_WIDTH();
+	h5dims[1] = config.GRID_HEIGHT();
+
+  // open file
+  H5::H5File file(FILENAME, H5F_ACC_RDONLY);
+
+  // get signal dataset
+  H5::DataSet dataset = file.openDataSet("/data/table");
+
+  // get the dataspace
+  H5::DataSpace dataspace = dataset.getSpace();
+
+  // get dimensions
+  dataspace.getSimpleExtentDims(h5dims, NULL);
+
+  hsize_t offset[2], count[2], stride[2], block[2];
+	hsize_t dimsm[2];
+
+  offset[0] = coord_2d[0]*mini_grid_dim;
+	offset[1] = coord_2d[1]*mini_grid_dim;
+
+	count[0]  = mini_grid_dim;
+	count[1]  = mini_grid_dim;
+
+	stride[0] = 1;
+	stride[1] = 1;
+
+	block[0] = 1;
+	block[1] = 1;
+
+  // Define Memory Dataspace. Get file dataspace and select
+  // a subset from the file dataspace.
+
+  dimsm[0] = mini_grid_dim;
+  dimsm[1] = mini_grid_dim;
+
+  H5::DataSpace memspace(2, dimsm, NULL);
+
+	dataspace = dataset.getSpace();
+	dataspace.selectHyperslab(H5S_SELECT_SET, count, offset, stride, block);
+
+  int** rdata = new int*[mini_grid_dim];
+  for(size_t i = 0; i < mini_grid_dim; ++i)
+      rdata[i] = new int[mini_grid_dim];
+
+	// dataset.read(rdata, H5::PredType::NATIVE_INT, memspace, dataspace);
+
+  for(size_t x = 0; x < mini_grid_dim; ++x) {
+    for(size_t y = 0; y < mini_grid_dim; ++y) {
+      channelIDs[x+y*mini_grid_dim] = rdata[x][y];
+    }
+  }
+
+  // all done with file
+  file.close();
+
   MPI_Request send_requests [4];
   MPI_Request recv_requests [4];
 
   MPI_Request send_requests_ch [4];
   MPI_Request recv_requests_ch [4];
 
+  MPI_Barrier(comm_cart);
   // do work
   double target_walltime = get_walltime() + config.RUN_DURATION();
   int bcast_breaker = true;
