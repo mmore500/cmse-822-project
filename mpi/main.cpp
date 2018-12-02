@@ -129,19 +129,24 @@ int main(int argc, char *argv[])
   MPI_Type_commit(&verticalEdge);
 
   // setup channel IDs
-  size_t* channelIDs = new size_t[mini_grid_dim*mini_grid_dim];
+  int* channelIDs = new int[mini_grid_dim*mini_grid_dim];
 
   // setup resource stockpiles
   double* stockpiles = new double[mini_grid_dim*mini_grid_dim];
 
   // setup signal status
- int* signals = new int[mini_grid_dim*mini_grid_dim];
- int* signals_bak = new int[mini_grid_dim*mini_grid_dim];
+  int* signals = new int[mini_grid_dim*mini_grid_dim];
+  int* signals_bak = new int[mini_grid_dim*mini_grid_dim];
 
- int* signals_up = new int[mini_grid_dim];
- int* signals_down = new int[mini_grid_dim];
- int* signals_left = new int[mini_grid_dim];
- int* signals_right = new int[mini_grid_dim];
+  int* signals_up = new int[mini_grid_dim];
+  int* signals_down = new int[mini_grid_dim];
+  int* signals_left = new int[mini_grid_dim];
+  int* signals_right = new int[mini_grid_dim];
+
+  int* channels_up = new int[mini_grid_dim];
+  int* channels_down = new int[mini_grid_dim];
+  int* channels_left = new int[mini_grid_dim];
+  int* channels_right = new int[mini_grid_dim];
 
   // initialize everything
   for(size_t i = 0; i < mini_grid_dim*mini_grid_dim; ++i) {
@@ -153,6 +158,9 @@ int main(int argc, char *argv[])
 
   MPI_Request send_requests [4];
   MPI_Request recv_requests [4];
+
+  MPI_Request send_requests_ch [4];
+  MPI_Request recv_requests_ch [4];
 
   // do work
   double target_walltime = get_walltime() + config.RUN_DURATION();
@@ -178,6 +186,24 @@ int main(int argc, char *argv[])
       comm_cart, /* MPI_Comm comm */
       &recv_requests[0] /* MPI_Request *request */
     );
+    MPI_Isend(
+      channelIDs, /* const void *buf */
+      1, /* int count */
+      verticalEdge, /* MPI_Datatype datatype */
+      rank_left, /* int dest */
+      4, /* int tag */
+      comm_cart, /* MPI_Comm comm */
+      &send_requests_ch[0] /* MPI_Request *request */
+    );
+    MPI_Irecv(
+      signals_left, /* void *buf */
+      mini_grid_dim, /* int count */
+      MPI_INT, /* MPI_Datatype datatype */
+      rank_left, /* int source */
+      5, /* int tag */
+      comm_cart, /* MPI_Comm comm */
+      &recv_requests_ch[0] /* MPI_Request *request */
+    );
 
     // right
     MPI_Isend(
@@ -198,6 +224,24 @@ int main(int argc, char *argv[])
       comm_cart, /* MPI_Comm comm */
       &recv_requests[1] /* MPI_Request *request */
     );
+    MPI_Isend(
+      &channelIDs[mini_grid_dim-1], /* const void *buf */
+      1, /* int count */
+      verticalEdge, /* MPI_Datatype datatype */
+      rank_right, /* int dest */
+      5, /* int tag */
+      comm_cart, /* MPI_Comm comm */
+      &send_requests_ch[1] /* MPI_Request *request */
+    );
+    MPI_Irecv(
+      channels_right, /* void *buf */
+      mini_grid_dim, /* int count */
+      MPI_INT, /* MPI_Datatype datatype */
+      rank_right, /* int source */
+      4, /* int tag */
+      comm_cart, /* MPI_Comm comm */
+      &recv_requests_ch[1] /* MPI_Request *request */
+    );
 
     //`up
     MPI_Isend(
@@ -217,6 +261,24 @@ int main(int argc, char *argv[])
       3, /* int tag */
       comm_cart, /* MPI_Comm comm */
       &recv_requests[2] /* MPI_Request *request */
+    );
+    MPI_Isend(
+      &channelIDs[mini_grid_dim*(mini_grid_dim-1)], /* const void *buf */
+      mini_grid_dim, /* int count */
+      MPI_INT, /* MPI_Datatype datatype */
+      rank_up, /* int dest */
+      6, /* int tag */
+      comm_cart, /* MPI_Comm comm */
+      &send_requests_ch[2] /* MPI_Request *request */
+    );
+    MPI_Irecv(
+      channels_up, /* void *buf */
+      mini_grid_dim, /* int count */
+      MPI_INT, /* MPI_Datatype datatype */
+      rank_up, /* int source */
+      7, /* int tag */
+      comm_cart, /* MPI_Comm comm */
+      &recv_requests_ch[2] /* MPI_Request *request */
     );
 
 
@@ -239,23 +301,47 @@ int main(int argc, char *argv[])
       comm_cart, /* MPI_Comm comm */
       &recv_requests[3] /* MPI_Request *request */
     );
+    MPI_Isend(
+      channelIDs, /* const void *buf */
+      mini_grid_dim, /* int count */
+      MPI_INT, /* MPI_Datatype datatype */
+      rank_down, /* int dest */
+      7, /* int tag */
+      comm_cart, /* MPI_Comm comm */
+      &send_requests_ch[3] /* MPI_Request *request */
+    );
+    MPI_Irecv(
+      channels_down, /* void *buf */
+      mini_grid_dim, /* int count */
+      MPI_INT, /* MPI_Datatype datatype */
+      rank_down, /* int source */
+      6, /* int tag */
+      comm_cart, /* MPI_Comm comm */
+      &recv_requests_ch[3] /* MPI_Request *request */
+    );
 
     // handle interior sending/receiving
     for(size_t x = 0; x < mini_grid_dim; ++x) {
       for(size_t y = 0; y < mini_grid_dim; ++y) {
         if(signals[x+y*mini_grid_dim] >= 0) {
           signals_bak[x+y*mini_grid_dim] = -2;
-          for(int dx : {x > 0 ? -1 : 0, x < mini_grid_dim-1 ? 1 : 0}) {
-            for(int dy : {y > 0 ? -1 : 0, y < mini_grid_dim-1 ? 1 : 0}) {
-              if (signals_bak[x+dx+(y+dy)*mini_grid_dim] == -1) {
-                signals_bak[x+dx+(y+dy)*mini_grid_dim] = signals[x+y*mini_grid_dim]+1;
-              } else if (signals_bak[x+dx+(y+dy)*mini_grid_dim] >= 0) {
-                signals_bak[x+dx+(y+dy)*mini_grid_dim] =
-                std::min(
-                  signals[x+y*mini_grid_dim]+1,
-                  signals_bak[x+dx+(y+dy)*mini_grid_dim]
-                );
+          for(int dx : {-1, 1}) {
+            if (x+dx < 0 || x+dx >= mini_grid_dim) continue;
+            for(int dy : {-1, 1}) {
+              if (y+dy < 0 || y+dy >= mini_grid_dim) continue;
+
+              if (channelIDs[x+dx+(y+dy)*mini_grid_dim] == channelIDs[x+(y)*mini_grid_dim]) {
+                if (signals_bak[x+dx+(y+dy)*mini_grid_dim] == -1) {
+                  signals_bak[x+dx+(y+dy)*mini_grid_dim] = signals[x+y*mini_grid_dim]+1;
+                } else if (signals_bak[x+dx+(y+dy)*mini_grid_dim] >= 0) {
+                  signals_bak[x+dx+(y+dy)*mini_grid_dim] =
+                  std::min(
+                    signals[x+y*mini_grid_dim]+1,
+                    signals_bak[x+dx+(y+dy)*mini_grid_dim]
+                  );
+                }
               }
+
             }
           }
           // distribute reward
@@ -273,15 +359,22 @@ int main(int argc, char *argv[])
       recv_requests, /* MPI_Request array_of_requests[] */
       MPI_STATUSES_IGNORE /* MPI_Status array_of_statuses[] */
     );
+    MPI_Waitall(
+      4, /* int count */
+      recv_requests_ch, /* MPI_Request array_of_requests[] */
+      MPI_STATUSES_IGNORE /* MPI_Status array_of_statuses[] */
+    );
 
     // handle periphery receiving and processing
 
     // left
     for(size_t y = 0; y < mini_grid_dim; ++y) {
       if (signals_left[y] >= 0) {
-        if (signals_bak[0+y*mini_grid_dim] == -1) {
-          //TODO order ambiguity here
-          signals_bak[0+y*mini_grid_dim] = signals_left[y]+1;
+        if (channels_left[y] == channelIDs[0+y*mini_grid_dim]) {
+          if (signals_bak[0+y*mini_grid_dim] == -1) {
+            //TODO order ambiguity here
+            signals_bak[0+y*mini_grid_dim] = signals_left[y]+1;
+          }
         }
       }
     }
@@ -289,9 +382,11 @@ int main(int argc, char *argv[])
     // right
     for(size_t y = 0; y < mini_grid_dim; ++y) {
       if (signals_right[y] >= 0) {
-        if (signals_bak[mini_grid_dim-1+y*mini_grid_dim] == -1) {
-          //TODO order ambiguity here
-          signals_bak[mini_grid_dim-1+y*mini_grid_dim] = signals_right[y]+1;
+        if (channels_right[y] == channelIDs[mini_grid_dim-1+y*mini_grid_dim]) {
+          if (signals_bak[mini_grid_dim-1+y*mini_grid_dim] == -1) {
+            //TODO order ambiguity here
+            signals_bak[mini_grid_dim-1+y*mini_grid_dim] = signals_right[y]+1;
+          }
         }
       }
     }
@@ -299,9 +394,11 @@ int main(int argc, char *argv[])
     // up
     for(size_t x = 0; x < mini_grid_dim; ++x) {
       if (signals_up[x] >= 0) {
-        if (signals_bak[mini_grid_dim*(mini_grid_dim-1)+x] == -1) {
-          //TODO order ambiguity here
-          signals_bak[mini_grid_dim*(mini_grid_dim-1)+x] = signals_up[x]+1;
+        if (channels_up[x] == channelIDs[mini_grid_dim*(mini_grid_dim-1)+x]) {
+          if (signals_bak[mini_grid_dim*(mini_grid_dim-1)+x] == -1) {
+            //TODO order ambiguity here
+            signals_bak[mini_grid_dim*(mini_grid_dim-1)+x] = signals_up[x]+1;
+          }
         }
       }
     }
@@ -309,9 +406,11 @@ int main(int argc, char *argv[])
     // bottom
     for(size_t x = 0; x < mini_grid_dim; ++x) {
       if (signals_down[x] >= 0) {
-        if (signals_bak[x] == -1) {
-          //TODO order ambiguity here
-          signals_bak[x] = signals_down[x]+1;
+        if (signals_down[x] == channelIDs[x]) {
+          if (signals_bak[x] == -1) {
+            //TODO order ambiguity here
+            signals_bak[x] = signals_down[x]+1;
+          }
         }
       }
     }
@@ -340,6 +439,11 @@ int main(int argc, char *argv[])
     MPI_Waitall(
       4, /* int count */
       send_requests, /* MPI_Request array_of_requests[] */
+      MPI_STATUSES_IGNORE /* MPI_Status array_of_statuses[] */
+    );
+    MPI_Waitall(
+      4, /* int count */
+      send_requests_ch, /* MPI_Request array_of_requests[] */
       MPI_STATUSES_IGNORE /* MPI_Status array_of_statuses[] */
     );
 
