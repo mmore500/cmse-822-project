@@ -386,17 +386,24 @@ int main(int argc, char *argv[])
       &recv_requests_ch[3] /* MPI_Request *request */
     );
 
+    for(size_t x = 0; x < mini_grid_dim; ++x) {
+      for(size_t y = 0; y < mini_grid_dim; ++y) {
+        signals_bak[x+y*mini_grid_dim] = -1;
+      }
+    }
+
     // handle interior sending/receiving
     for(size_t x = 0; x < mini_grid_dim; ++x) {
       for(size_t y = 0; y < mini_grid_dim; ++y) {
-        if(signals[x+y*mini_grid_dim] >= 0) {
+
+        if (signals[x+y*mini_grid_dim] >= 0) {
           signals_bak[x+y*mini_grid_dim] = -2;
-          for(int dx : {-1, 1}) {
+          for(int dx : {-1, 1, 0}) {
             if (x+dx < 0 || x+dx >= mini_grid_dim) continue;
-            for(int dy : {-1, 1}) {
+            for(int dy : {(dx == 0) ? -1 : 0, (dx == 0) ? 1 : 0}) {
               if (y+dy < 0 || y+dy >= mini_grid_dim) continue;
 
-              if (channelIDs[x+dx+(y+dy)*mini_grid_dim] == channelIDs[x+(y)*mini_grid_dim]) {
+              if (signals[x+dx+(y+dy)*mini_grid_dim] == -1 && channelIDs[x+dx+(y+dy)*mini_grid_dim] == channelIDs[x+(y)*mini_grid_dim]) {
                 if (signals_bak[x+dx+(y+dy)*mini_grid_dim] == -1) {
                   signals_bak[x+dx+(y+dy)*mini_grid_dim] = signals[x+y*mini_grid_dim]+1;
                 } else if (signals_bak[x+dx+(y+dy)*mini_grid_dim] >= 0) {
@@ -411,7 +418,7 @@ int main(int argc, char *argv[])
             }
           }
           // distribute reward
-          if(signals[x+y*mini_grid_dim] >= config.WAVE_SIZE()) {
+          if(signals[x+y*mini_grid_dim] <= config.WAVE_SIZE()) {
             stockpiles[x+y*mini_grid_dim] += config.WAVE_REWARD();
           } else {
             stockpiles[x+y*mini_grid_dim] += config.WAVE_PENALTY();
@@ -437,9 +444,16 @@ int main(int argc, char *argv[])
     for(size_t y = 0; y < mini_grid_dim; ++y) {
       if (signals_left[y] >= 0) {
         if (channels_left[y] == channelIDs[0+y*mini_grid_dim]) {
-          if (signals_bak[0+y*mini_grid_dim] == -1) {
-            //TODO order ambiguity here
-            signals_bak[0+y*mini_grid_dim] = signals_left[y]+1;
+          if (signals[0+y*mini_grid_dim] == -1) {
+            if (signals_bak[0+y*mini_grid_dim] == -1) {
+              signals_bak[0+y*mini_grid_dim] = signals_left[y]+1;
+            } else if (signals_bak[0+y*mini_grid_dim] >= 0) {
+              signals_bak[0+y*mini_grid_dim] =
+              std::min(
+                signals_left[y]+1,
+                signals_bak[0+y*mini_grid_dim]
+              );
+            }
           }
         }
       }
@@ -449,9 +463,16 @@ int main(int argc, char *argv[])
     for(size_t y = 0; y < mini_grid_dim; ++y) {
       if (signals_right[y] >= 0) {
         if (channels_right[y] == channelIDs[mini_grid_dim-1+y*mini_grid_dim]) {
-          if (signals_bak[mini_grid_dim-1+y*mini_grid_dim] == -1) {
-            //TODO order ambiguity here
-            signals_bak[mini_grid_dim-1+y*mini_grid_dim] = signals_right[y]+1;
+          if (signals[mini_grid_dim-1+y*mini_grid_dim] == -1) {
+            if (signals_bak[mini_grid_dim-1+y*mini_grid_dim] == -1) {
+              signals_bak[mini_grid_dim-1+y*mini_grid_dim] = signals_right[y]+1;
+            } else if (signals_bak[mini_grid_dim-1+y*mini_grid_dim] >= 0) {
+              signals_bak[mini_grid_dim-1+y*mini_grid_dim] =
+              std::min(
+                signals_right[y]+1,
+                signals_bak[mini_grid_dim-1+y*mini_grid_dim]
+              );
+            }
           }
         }
       }
@@ -461,9 +482,16 @@ int main(int argc, char *argv[])
     for(size_t x = 0; x < mini_grid_dim; ++x) {
       if (signals_up[x] >= 0) {
         if (channels_up[x] == channelIDs[mini_grid_dim*(mini_grid_dim-1)+x]) {
-          if (signals_bak[mini_grid_dim*(mini_grid_dim-1)+x] == -1) {
-            //TODO order ambiguity here
-            signals_bak[mini_grid_dim*(mini_grid_dim-1)+x] = signals_up[x]+1;
+          if (signals[mini_grid_dim*(mini_grid_dim-1)+x] == -1) {
+            if (signals_bak[mini_grid_dim*(mini_grid_dim-1)+x] == -1) {
+              signals_bak[mini_grid_dim*(mini_grid_dim-1)+x] = signals_up[x]+1;
+            } else if (signals_bak[mini_grid_dim*(mini_grid_dim-1)+x] >= 0) {
+              signals_bak[mini_grid_dim*(mini_grid_dim-1)+x] =
+              std::min(
+                signals_up[x]+1,
+                signals_bak[mini_grid_dim*(mini_grid_dim-1)+x]
+              );
+            }
           }
         }
       }
@@ -472,17 +500,24 @@ int main(int argc, char *argv[])
     // bottom
     for(size_t x = 0; x < mini_grid_dim; ++x) {
       if (signals_down[x] >= 0) {
-        if (signals_down[x] == channelIDs[x]) {
-          if (signals_bak[x] == -1) {
-            //TODO order ambiguity here
-            signals_bak[x] = signals_down[x]+1;
+        if (channels_down[x] == channelIDs[x]) {
+          if (signals[x] == -1) {
+            if (signals_bak[x] == -1) {
+              signals_bak[x] = signals_down[x]+1;
+            } else if (signals_bak[x] >= 0) {
+              signals_bak[x] =
+              std::min(
+                signals_down[x]+1,
+                signals_bak[x]
+              );
+            }
           }
         }
       }
     }
 
     // seed events
-    if (update % (1+(int)config.WAVE_SIZE()) == 0) {
+    if (update%((int)config.WAVE_SIZE()+1) == 0) {
 
       // seed new
       size_t seed_disp_x = distr(eng);
@@ -526,9 +561,9 @@ int main(int argc, char *argv[])
     );
   }
 
-  for (size_t i = 0; i < mini_grid_dim*mini_grid_dim; ++i) {
-    stockpiles[i] = i;
-  }
+  // for (size_t i = 0; i < mini_grid_dim*mini_grid_dim; ++i) {
+  //   stockpiles[i] = i;
+  // }
 
   // write resulting resource amounts to file
 

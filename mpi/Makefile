@@ -8,7 +8,7 @@ main.out: main.cpp
 	h5pcc $(CFLAGS_all) -O3 -std=c++14 -o main.out main.cpp
 
 run: main.out
-	mpirun -n 16 main.out
+	mpirun -n 1 main.out
 
 clean:
 	rm -f *.out *.o
