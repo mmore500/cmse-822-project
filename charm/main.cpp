@@ -1,3 +1,7 @@
+#include <sstream>
+#include <string>
+#include <stdlib.h>
+
 #include "main.decl.h"
 
 #include "config/command_line.h"
@@ -66,6 +70,32 @@ Main::Main(CkArgMsg* msg) {
 
   // create the array of Tile chare objects
   CProxy_Tile tileArray = CProxy_Tile::ckNew(numElements);
+
+
+  std::ostringstream oss;
+  oss << "../layouts/" << config.GRID_WIDTH() << "x" << config.GRID_HEIGHT() << ".csv";
+
+  std::ifstream  data(oss.str());
+  std::string line;
+  std::vector<std::vector<int> > parsedCsv;
+  while(std::getline(data,line))
+  {
+      std::stringstream lineStream(line);
+      std::string cell;
+      std::vector<int> parsedRow;
+      while(std::getline(lineStream,cell,','))
+      {
+          parsedRow.push_back(atoi(cell.c_str()));
+      }
+
+      parsedCsv.push_back(parsedRow);
+  }
+
+  for( size_t x = 0; x < config.GRID_WIDTH(); ++x) {
+    for( size_t y = 0; y < config.GRID_HEIGHT(); ++y) {
+      tileArray[x+y*config.GRID_WIDTH()].setChan(parsedCsv[y][x]);
+    }
+  }
 
   // invoke the seedGen() entry method on all of the
   // elements in the tileArray array of chare objects

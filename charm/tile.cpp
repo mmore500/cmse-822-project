@@ -78,6 +78,11 @@ Tile::Tile() {
 /* constructor for migration */
 Tile::Tile(CkMigrateMessage *msg) {/* TODO */}
 
+/* Set channelID */
+void Tile::setChan(size_t channelID){
+  this->channelID = channelID;
+}
+
 /* Seed resource waves */
 void Tile::seedGen(double lastSeedGenTime) {
 

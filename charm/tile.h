@@ -34,6 +34,7 @@ public:
   Tile(CkMigrateMessage *msg);
 
   /* Entry Methods */
+  void setChan(size_t channelID);
   void seedGen(double lastSeedGenTime);
   void takeTap(
       double firstTapTime,

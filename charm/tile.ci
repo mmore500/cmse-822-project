@@ -2,6 +2,7 @@ module tile {
 
   array [1D] Tile {
     entry Tile();
+    entry void setChan(size_t channelID);
     entry void seedGen(double lastSeedGenTime);
     entry [expedited] void takeTap(
         double firstTapTime,
