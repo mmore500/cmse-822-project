@@ -32,7 +32,7 @@ localrun: clean tile
 	./charmrun +p4 ./tile
 
 remoterun: clean tile
-	./charmrun ++mpiexec +p36 ./tile
+	./charmrun ++mpiexec +p50 ./tile
 
 send: clean
 	cd .. && ./rsync.sh

@@ -1,6 +1,7 @@
 #include <sstream>
 #include <string>
 #include <stdlib.h>
+#include <fstream>
 
 #include "main.decl.h"
 
@@ -56,7 +57,7 @@ Main::Main(CkArgMsg* msg) {
 
   // initialize the local member variables
   doneCount = 0;
-  numElements = config.GRID_WIDTH() * config.GRID_HEIGHT();
+  numElements = GRID_WIDTH * GRID_HEIGHT;
 
   // display info about this execution
   CkPrintf("Running Tile World with %d elements "
@@ -73,7 +74,7 @@ Main::Main(CkArgMsg* msg) {
 
 
   std::ostringstream oss;
-  oss << "../layouts/" << config.GRID_WIDTH() << "x" << config.GRID_HEIGHT() << ".csv";
+  oss << "../layouts/" << GRID_WIDTH << "x" << GRID_HEIGHT << ".csv";
 
   std::ifstream  data(oss.str());
   std::string line;
@@ -91,9 +92,9 @@ Main::Main(CkArgMsg* msg) {
       parsedCsv.push_back(parsedRow);
   }
 
-  for( size_t x = 0; x < config.GRID_WIDTH(); ++x) {
-    for( size_t y = 0; y < config.GRID_HEIGHT(); ++y) {
-      tileArray[x+y*config.GRID_WIDTH()].setChan(parsedCsv[y][x]);
+  for( size_t x = 0; x < GRID_WIDTH; ++x) {
+    for( size_t y = 0; y < GRID_HEIGHT; ++y) {
+      tileArray[x+y*GRID_WIDTH].setChan(parsedCsv[y][x]);
     }
   }
 
@@ -116,10 +117,20 @@ void Main::done(size_t which, double amount) {
   // otherwise, keep waiting
   if (doneCount >= numElements) {
 
-    for (size_t i = 0; i < numElements; ++i) {
-      CkPrintf("%lu %f\n", i, result[i]);
+    CkPrintf("test1");
+    std::fstream fs;
+    fs.open("output.csv", std::fstream::out);
+
+    for (size_t x = 0; x < GRID_WIDTH; ++x) {
+      for (size_t y = 0; y < GRID_HEIGHT; ++y) {
+        fs << result[x+y*GRID_WIDTH];
+        if(y<GRID_HEIGHT-1) fs <<",";
+      }
+      fs << '\n';
     }
 
+    CkPrintf("test");
+    fs.close();
     CkExit();
   }
 }

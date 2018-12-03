@@ -76,7 +76,10 @@ Tile::Tile() {
 }
 
 /* constructor for migration */
-Tile::Tile(CkMigrateMessage *msg) {/* TODO */}
+Tile::Tile(CkMigrateMessage *msg) {
+  CkPrintf("Unimplemented migration");
+  CkExit();
+}
 
 /* Set channelID */
 void Tile::setChan(size_t channelID){
