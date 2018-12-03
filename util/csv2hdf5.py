@@ -6,11 +6,9 @@ import sys
 
 filename = '/tmp/test.h5'
 
-df = pd.read_csv(sys.argv[1]+".csv",header=None)
+df = pd.read_csv(sys.argv[1]+".csv",index_col=False,header=None)
 print(df)
 
 # Save to HDF5
-df.to_hdf(sys.argv[1]+".h5", 'data', mode='w', format='table')
+df.to_hdf(sys.argv[1]+".h5", 'data', mode='w', format='fixed')
 del df    # allow df to be garbage collected
-
-print(pd.read_hdf(sys.argv[1]+".h5", 'data'))

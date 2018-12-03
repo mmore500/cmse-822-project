@@ -5,7 +5,7 @@ CFLAGS_nat := -O3 -DNDEBUG $(CFLAGS_all)
 all: main.out
 
 main.out: main.cpp
-	h5c++ $(CFLAGS_all) -O3 --std=c++14 -o main.out main.cpp
+	h5pcc $(CFLAGS_all) -O3 -std=c++14 -o main.out main.cpp
 
 run: main.out
 	mpirun -n 16 main.out

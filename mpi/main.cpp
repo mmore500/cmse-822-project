@@ -7,7 +7,9 @@
 #include <cmath>
 #include <algorithm>
 #include <string>
+#include <random>
 #include <sstream>
+#include "hdf5.h"
 #include "H5Cpp.h"
 
 #include "config/command_line.h"
@@ -163,6 +165,8 @@ int main(int argc, char *argv[])
   // hardwire data properties
   // adapted from https://gmsciprog.wordpress.com/2013/08/23/simple-hdf5-for-python-and-c/
   // and https://support.hdfgroup.org/ftp/HDF5/current/src/unpacked/c++/examples/h5tutr_subset.cpp
+  // and https://support.hdfgroup.org/ftp/HDF5/examples/examples-by-api/hdf5-examples/1_10/C/H5T/h5ex_t_array.c
+
   std::ostringstream oss;
   oss << "../layouts/" << config.GRID_WIDTH() << "x" << config.GRID_HEIGHT() << ".h5";
   const H5std_string FILENAME =  oss.str();
@@ -172,57 +176,50 @@ int main(int argc, char *argv[])
 	h5dims[1] = config.GRID_HEIGHT();
 
   // open file
-  H5::H5File file(FILENAME, H5F_ACC_RDONLY);
+  hid_t file = H5Fopen(
+      FILENAME.c_str(),
+      H5F_ACC_RDONLY,
+      H5P_DEFAULT
+    );
 
   // get signal dataset
-  H5::DataSet dataset = file.openDataSet("/data/table");
+  hid_t dataset = H5Dopen(file, "/data/block0_values", H5P_DEFAULT);
 
   // get the dataspace
-  H5::DataSpace dataspace = dataset.getSpace();
+  hid_t dataspace = H5Dget_space(dataset);
 
-  // get dimensions
-  dataspace.getSimpleExtentDims(h5dims, NULL);
+  /*
+  * Allocate two dimensional array of pointers to rows in the data
+  * elements.
+  */
+  int **rdata = new int* [h5dims[0]];
 
-  hsize_t offset[2], count[2], stride[2], block[2];
-	hsize_t dimsm[2];
+  for(size_t x = 0; x < h5dims[0]; ++x) {
+    rdata[x] = new int [h5dims[1]];
+  }
 
-  offset[0] = coord_2d[0]*mini_grid_dim;
-	offset[1] = coord_2d[1]*mini_grid_dim;
-
-	count[0]  = mini_grid_dim;
-	count[1]  = mini_grid_dim;
-
-	stride[0] = 1;
-	stride[1] = 1;
-
-	block[0] = 1;
-	block[1] = 1;
-
-  // Define Memory Dataspace. Get file dataspace and select
-  // a subset from the file dataspace.
-
-  dimsm[0] = mini_grid_dim;
-  dimsm[1] = mini_grid_dim;
-
-  H5::DataSpace memspace(2, dimsm, NULL);
-
-	dataspace = dataset.getSpace();
-	dataspace.selectHyperslab(H5S_SELECT_SET, count, offset, stride, block);
-
-  int** rdata = new int*[mini_grid_dim];
-  for(size_t i = 0; i < mini_grid_dim; ++i)
-      rdata[i] = new int[mini_grid_dim];
-
-	// dataset.read(rdata, H5::PredType::NATIVE_INT, memspace, dataspace);
+  /*
+  * Read the data.
+  */
+  H5Dread(
+    dataset,
+    H5T_NATIVE_INT,
+    H5S_ALL,
+    H5S_ALL,
+    H5P_DEFAULT,
+    &rdata[0][0]
+  );
 
   for(size_t x = 0; x < mini_grid_dim; ++x) {
     for(size_t y = 0; y < mini_grid_dim; ++y) {
-      channelIDs[x+y*mini_grid_dim] = rdata[x][y];
+      channelIDs[x+y*mini_grid_dim] = rdata[x+coord_2d[0]*mini_grid_dim][y+coord_2d[1]*mini_grid_dim];
     }
   }
 
   // all done with file
-  file.close();
+  H5Sclose(dataspace);
+  H5Dclose(dataset);
+  H5Fclose(file);
 
   MPI_Request send_requests [4];
   MPI_Request recv_requests [4];
@@ -529,11 +526,105 @@ int main(int argc, char *argv[])
     );
   }
 
+  for (size_t i = 0; i < mini_grid_dim*mini_grid_dim; ++i) {
+    stockpiles[i] = i;
+  }
+
+  // write resulting resource amounts to file
+
+  // adapted from http://www.astro.sunysb.edu/mzingale/io_tutorial/HDF5_parallel/hdf5_parallel.c
+  hid_t acc_template;
+  acc_template = H5Pcreate(H5P_FILE_ACCESS);
+  H5Pset_fapl_mpio(acc_template, comm_cart, MPI_INFO_NULL);
+
+  hid_t file_identifier = H5Fcreate(
+      "output.h5",
+      H5F_ACC_TRUNC,
+      H5P_DEFAULT,
+  		acc_template
+    );
+
+  H5Pclose(acc_template);
+
+  printf("writing out proc %d, 0,0\n", rank_2d);
+
+  hid_t cdataspace, cmemspace, cdataset;
+  hsize_t dimens_2d[2];
+
+  dimens_2d[0] = config.GRID_WIDTH();
+  dimens_2d[1] = config.GRID_HEIGHT();
+
+  cdataspace = H5Screate_simple(2, dimens_2d, NULL);
+
+  hsize_t start_2d[2];
+  // hsize_t stride_2d[2];
+  hsize_t count_2d[2];
+  hsize_t block_2d[2];
+
+  start_2d[0] = mini_grid_dim * coord_2d[0];
+  start_2d[1] = mini_grid_dim * coord_2d[1];
+
+  // stride_2d[0] = 1;
+  // stride_2d[1] = 1;
+
+  count_2d[0] = 1;
+  count_2d[1] = 1;
+
+  block_2d[0] = mini_grid_dim;
+  block_2d[1] = mini_grid_dim;
+
+  H5Sselect_hyperslab(
+      cdataspace,
+      H5S_SELECT_SET,
+      start_2d,
+      NULL,
+      count_2d,
+      block_2d
+    );
+
+  dimens_2d[0] = mini_grid_dim;
+  dimens_2d[1] = mini_grid_dim;
+
+  cmemspace = H5Screate_simple(2, dimens_2d, NULL);
+
+  double **datapointers = new double*[mini_grid_dim*mini_grid_dim];
+  for (size_t i = 0; i < mini_grid_dim; ++i) {
+    datapointers[i] = stockpiles + i*mini_grid_dim;
+  }
+
+  cdataset = H5Dcreate(
+      file_identifier,
+      "data",
+      H5T_NATIVE_DOUBLE,
+  		cdataspace,
+      H5P_DEFAULT,
+      H5P_DEFAULT,
+      H5P_DEFAULT
+    );
+
+  for(int r = 0; r < world_size; ++r){
+    if(rank_2d == r) {
+      H5Dwrite(
+          cdataset,
+          H5T_NATIVE_DOUBLE,
+          cmemspace,
+          cdataspace,
+          H5P_DEFAULT,
+          &(datapointers[0][0])
+        );
+    }
+    MPI_Barrier(comm_cart);
+  }
+
+
+  H5Sclose(cmemspace);
+  H5Sclose(cdataspace);
+  H5Dclose(cdataset);
+  H5Fclose(file_identifier);
+
   // Finalize the MPI environment.
   MPI_Type_free(&verticalEdge);
   MPI_Finalize();
 
-
-  std::cout << "hello world" << std::endl;
   return 0;
 }
