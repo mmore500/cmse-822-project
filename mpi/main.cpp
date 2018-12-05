@@ -123,25 +123,39 @@ int main(int argc, char *argv[])
   const size_t rel_y = mini_grid_dim * coord_2d[1];
 
   // setup data types
-  MPI_Datatype verticalEdge;
+  MPI_Datatype horizontalEdge;
   MPI_Type_vector(
     mini_grid_dim, /* int count */
     1, /* int blocklength */
     mini_grid_dim, /* int stride */
     MPI_INT, /* MPI_Datatype oldtype */
-    &verticalEdge /* MPI_Datatype *newtype */
+    &horizontalEdge /* MPI_Datatype *newtype */
   );
-  MPI_Type_commit(&verticalEdge);
+  MPI_Type_commit(&horizontalEdge);
 
   // setup channel IDs
-  int* channelIDs = new int[mini_grid_dim*mini_grid_dim];
+  int* channelIDs_buf = new int[mini_grid_dim*mini_grid_dim];
+  int** channelIDs = new int*[mini_grid_dim];
+  for(size_t i = 0; i < mini_grid_dim; ++i) {
+    channelIDs[i] = &channelIDs_buf[i*mini_grid_dim];
+  }
 
   // setup resource stockpiles
-  double* stockpiles = new double[mini_grid_dim*mini_grid_dim];
+  double* stockpiles_buf = new double[mini_grid_dim*mini_grid_dim];
+  double** stockpiles = new double*[mini_grid_dim];
+  for(size_t i = 0; i < mini_grid_dim; ++i) {
+    stockpiles[i] = &stockpiles_buf[i*mini_grid_dim];
+  }
 
   // setup signal status
-  int* signals = new int[mini_grid_dim*mini_grid_dim];
-  int* signals_bak = new int[mini_grid_dim*mini_grid_dim];
+  int* signals_buf = new int[mini_grid_dim*mini_grid_dim];
+  int* signals_bak_buf = new int[mini_grid_dim*mini_grid_dim];
+  int** signals = new int*[mini_grid_dim];
+  int** signals_bak = new int*[mini_grid_dim];
+  for(size_t i = 0; i < mini_grid_dim; ++i) {
+    signals[i] = &signals_buf[i*mini_grid_dim];
+    signals_bak[i] = &signals_bak_buf[i*mini_grid_dim];
+  }
 
   int* signals_up = new int[mini_grid_dim];
   int* signals_down = new int[mini_grid_dim];
@@ -155,10 +169,10 @@ int main(int argc, char *argv[])
 
   // initialize everything
   for(size_t i = 0; i < mini_grid_dim*mini_grid_dim; ++i) {
-      channelIDs[i] = 1;
-      stockpiles[i] = 0;
-      signals[i] = -1; // nothing going on
-      signals_bak[i] = -1; // nothing going on
+      channelIDs_buf[i] = 1;
+      stockpiles_buf[i] = 0;
+      signals_buf[i] = -1; // nothing going on
+      signals_bak_buf[i] = -1; // nothing going on
   }
 
   // set up channel layouts
@@ -213,7 +227,7 @@ int main(int argc, char *argv[])
 
   for(size_t x = 0; x < mini_grid_dim; ++x) {
     for(size_t y = 0; y < mini_grid_dim; ++y) {
-      channelIDs[x+y*mini_grid_dim] = rdata[x+coord_2d[0]*mini_grid_dim][y+coord_2d[1]*mini_grid_dim];
+      channelIDs[x][y] = rdata[y+coord_2d[1]*mini_grid_dim][x+coord_2d[0]*mini_grid_dim];
     }
   }
 
@@ -236,9 +250,9 @@ int main(int argc, char *argv[])
     // handle periphery send/recieve
     // left
     MPI_Isend(
-      signals, /* const void *buf */
-      1, /* int count */
-      verticalEdge, /* MPI_Datatype datatype */
+      signals[0], /* const void *buf */
+      mini_grid_dim, /* int count */
+      MPI_INT, /* MPI_Datatype datatype */
       rank_left, /* int dest */
       0, /* int tag */
       comm_cart, /* MPI_Comm comm */
@@ -254,16 +268,16 @@ int main(int argc, char *argv[])
       &recv_requests[0] /* MPI_Request *request */
     );
     MPI_Isend(
-      channelIDs, /* const void *buf */
-      1, /* int count */
-      verticalEdge, /* MPI_Datatype datatype */
+      channelIDs[0], /* const void *buf */
+      mini_grid_dim, /* int count */
+      MPI_INT, /* MPI_Datatype datatype */
       rank_left, /* int dest */
       4, /* int tag */
       comm_cart, /* MPI_Comm comm */
       &send_requests_ch[0] /* MPI_Request *request */
     );
     MPI_Irecv(
-      signals_left, /* void *buf */
+      channels_left, /* void *buf */
       mini_grid_dim, /* int count */
       MPI_INT, /* MPI_Datatype datatype */
       rank_left, /* int source */
@@ -274,9 +288,9 @@ int main(int argc, char *argv[])
 
     // right
     MPI_Isend(
-      &signals[mini_grid_dim-1], /* const void *buf */
-      1, /* int count */
-      verticalEdge, /* MPI_Datatype datatype */
+      signals[mini_grid_dim-1], /* const void *buf */
+      mini_grid_dim, /* int count */
+      MPI_INT, /* MPI_Datatype datatype */
       rank_right, /* int dest */
       1, /* int tag */
       comm_cart, /* MPI_Comm comm */
@@ -292,9 +306,9 @@ int main(int argc, char *argv[])
       &recv_requests[1] /* MPI_Request *request */
     );
     MPI_Isend(
-      &channelIDs[mini_grid_dim-1], /* const void *buf */
-      1, /* int count */
-      verticalEdge, /* MPI_Datatype datatype */
+      channelIDs[mini_grid_dim-1], /* const void *buf */
+      mini_grid_dim, /* int count */
+      MPI_INT, /* MPI_Datatype datatype */
       rank_right, /* int dest */
       5, /* int tag */
       comm_cart, /* MPI_Comm comm */
@@ -312,9 +326,9 @@ int main(int argc, char *argv[])
 
     //`up
     MPI_Isend(
-      &signals[mini_grid_dim*(mini_grid_dim-1)], /* const void *buf */
-      mini_grid_dim, /* int count */
-      MPI_INT, /* MPI_Datatype datatype */
+      signals_buf, /* const void *buf */
+      1, /* int count */
+      horizontalEdge, /* MPI_Datatype datatype */
       rank_up, /* int dest */
       2, /* int tag */
       comm_cart, /* MPI_Comm comm */
@@ -330,9 +344,9 @@ int main(int argc, char *argv[])
       &recv_requests[2] /* MPI_Request *request */
     );
     MPI_Isend(
-      &channelIDs[mini_grid_dim*(mini_grid_dim-1)], /* const void *buf */
-      mini_grid_dim, /* int count */
-      MPI_INT, /* MPI_Datatype datatype */
+      channelIDs_buf, /* const void *buf */
+      1, /* int count */
+      horizontalEdge, /* MPI_Datatype datatype */
       rank_up, /* int dest */
       6, /* int tag */
       comm_cart, /* MPI_Comm comm */
@@ -351,9 +365,9 @@ int main(int argc, char *argv[])
 
     // down
     MPI_Isend(
-      signals, /* const void *buf */
-      mini_grid_dim, /* int count */
-      MPI_INT, /* MPI_Datatype datatype */
+      &signals_buf[mini_grid_dim-1], /* const void *buf */
+      1, /* int count */
+      horizontalEdge, /* MPI_Datatype datatype */
       rank_down, /* int dest */
       3, /* int tag */
       comm_cart, /* MPI_Comm comm */
@@ -369,9 +383,9 @@ int main(int argc, char *argv[])
       &recv_requests[3] /* MPI_Request *request */
     );
     MPI_Isend(
-      channelIDs, /* const void *buf */
-      mini_grid_dim, /* int count */
-      MPI_INT, /* MPI_Datatype datatype */
+      &channelIDs_buf[mini_grid_dim-1], /* const void *buf */
+      1, /* int count */
+      horizontalEdge, /* MPI_Datatype datatype */
       rank_down, /* int dest */
       7, /* int tag */
       comm_cart, /* MPI_Comm comm */
@@ -389,7 +403,7 @@ int main(int argc, char *argv[])
 
     for(size_t x = 0; x < mini_grid_dim; ++x) {
       for(size_t y = 0; y < mini_grid_dim; ++y) {
-        signals_bak[x+y*mini_grid_dim] = -1;
+        signals_bak[x][y] = -1;
       }
     }
 
@@ -397,8 +411,8 @@ int main(int argc, char *argv[])
     for(size_t x = 0; x < mini_grid_dim; ++x) {
       for(size_t y = 0; y < mini_grid_dim; ++y) {
 
-        if (signals[x+y*mini_grid_dim] >= 0) {
-          signals_bak[x+y*mini_grid_dim] = -2;
+        if (signals[x][y] >= 0) {
+          signals_bak[x][y] = -2;
 
           const int dxlis [4] = {-1,1,0,0};
           const int dylis [4] = {0,0,1,-1};
@@ -417,16 +431,16 @@ int main(int argc, char *argv[])
             //   std::cout << channelIDs[x+dx+(y+dy)*mini_grid_dim] << std::endl;
             //   std::cout << channelIDs[x+(y)*mini_grid_dim] << std::endl;
 
-              if (signals[x+dx+(y+dy)*mini_grid_dim] == -1 && channelIDs[x+dx+(y+dy)*mini_grid_dim] == channelIDs[x+(y)*mini_grid_dim]) {
+              if (signals[x+dx][y+dy] == -1 && channelIDs[x+dx][y+dy] == channelIDs[x][y]) {
                 // std::cout << "!!" << x+dx << " " << y+dy << std::endl;
-                if (signals_bak[x+dx+(y+dy)*mini_grid_dim] == -1) {
-                  signals_bak[x+dx+(y+dy)*mini_grid_dim] = signals[x+y*mini_grid_dim]+1;
+                if (signals_bak[x+dx][y+dy] == -1) {
+                  signals_bak[x+dx][y+dy] = signals[x][y]+1;
                   // std::cout << "a!" << x+dx << " " << y+dy << std::endl;
-                } else if (signals_bak[x+dx+(y+dy)*mini_grid_dim] >= 0) {
-                  signals_bak[x+dx+(y+dy)*mini_grid_dim] =
+                } else if (signals_bak[x+dx][y+dy] >= 0) {
+                  signals_bak[x+dx][y+dy] =
                   std::min(
-                    signals[x+y*mini_grid_dim]+1,
-                    signals_bak[x+dx+(y+dy)*mini_grid_dim]
+                    signals[x][y]+1,
+                    signals_bak[x+dx][y+dy]
                   );
                   // std::cout << "b!" << x+dx << " " << y+dy << std::endl;
                 }
@@ -434,10 +448,10 @@ int main(int argc, char *argv[])
 
           }
           // distribute reward
-          if(signals[x+y*mini_grid_dim] <= config.WAVE_SIZE()) {
-            stockpiles[x+y*mini_grid_dim] += config.WAVE_REWARD();
+          if(signals[x][y] <= config.WAVE_SIZE()) {
+            stockpiles[x][y] += config.WAVE_REWARD();
           } else {
-            stockpiles[x+y*mini_grid_dim] += config.WAVE_PENALTY();
+            stockpiles[x][y] += config.WAVE_PENALTY();
           }
         }
       }
@@ -458,16 +472,17 @@ int main(int argc, char *argv[])
 
     // left
     for(size_t y = 0; y < mini_grid_dim; ++y) {
+      // std::cout << 0 << "," << y << ":" << channels_left[y] << std::endl;
       if (signals_left[y] >= 0) {
-        if (channels_left[y] == channelIDs[0+y*mini_grid_dim]) {
-          if (signals[0+y*mini_grid_dim] == -1) {
-            if (signals_bak[0+y*mini_grid_dim] == -1) {
-              signals_bak[0+y*mini_grid_dim] = signals_left[y]+1;
-            } else if (signals_bak[0+y*mini_grid_dim] >= 0) {
-              signals_bak[0+y*mini_grid_dim] =
+        if (channels_left[y] == channelIDs[0][y]) {
+          if (signals[0][y*mini_grid_dim] == -1) {
+            if (signals_bak[0][y] == -1) {
+              signals_bak[0][y] = signals_left[y]+1;
+            } else if (signals_bak[0][y] >= 0) {
+              signals_bak[0][y] =
               std::min(
                 signals_left[y]+1,
-                signals_bak[0+y*mini_grid_dim]
+                signals_bak[0][y]
               );
             }
           }
@@ -475,62 +490,70 @@ int main(int argc, char *argv[])
       }
     }
 
+    // std::cout << std::endl;
     // right
     for(size_t y = 0; y < mini_grid_dim; ++y) {
+      // std::cout << 3 << "," << y << ":" << channels_right[y] << std::endl;
       if (signals_right[y] >= 0) {
-        if (channels_right[y] == channelIDs[mini_grid_dim-1+y*mini_grid_dim]) {
-          if (signals[mini_grid_dim-1+y*mini_grid_dim] == -1) {
-            if (signals_bak[mini_grid_dim-1+y*mini_grid_dim] == -1) {
-              signals_bak[mini_grid_dim-1+y*mini_grid_dim] = signals_right[y]+1;
-            } else if (signals_bak[mini_grid_dim-1+y*mini_grid_dim] >= 0) {
-              signals_bak[mini_grid_dim-1+y*mini_grid_dim] =
+        if (channels_right[y] == channelIDs[mini_grid_dim-1][y]) {
+          if (signals[mini_grid_dim-1][y] == -1) {
+            if (signals_bak[mini_grid_dim-1][y] == -1) {
+              signals_bak[mini_grid_dim-1][y] = signals_right[y]+1;
+            } else if (signals_bak[mini_grid_dim-1][y] >= 0) {
+              signals_bak[mini_grid_dim-1][y] =
               std::min(
                 signals_right[y]+1,
-                signals_bak[mini_grid_dim-1+y*mini_grid_dim]
+                signals_bak[mini_grid_dim-1][y]
               );
             }
           }
         }
       }
     }
+
+    // std::cout << std::endl;
 
     // up
     for(size_t x = 0; x < mini_grid_dim; ++x) {
+      // std::cout << x << "," << 3 << ":" << channels_up[x] << std::endl;
       if (signals_up[x] >= 0) {
-        if (channels_up[x] == channelIDs[mini_grid_dim*(mini_grid_dim-1)+x]) {
-          if (signals[mini_grid_dim*(mini_grid_dim-1)+x] == -1) {
-            if (signals_bak[mini_grid_dim*(mini_grid_dim-1)+x] == -1) {
-              signals_bak[mini_grid_dim*(mini_grid_dim-1)+x] = signals_up[x]+1;
-            } else if (signals_bak[mini_grid_dim*(mini_grid_dim-1)+x] >= 0) {
-              signals_bak[mini_grid_dim*(mini_grid_dim-1)+x] =
+        if (channels_up[x] == channelIDs[x][0]) {
+          if (signals[x][0] == -1) {
+            if (signals_bak[x][0] == -1) {
+              signals_bak[x][0] = signals_up[x]+1;
+            } else if (signals_bak[x][0] >= 0) {
+              signals_bak[x][0] =
               std::min(
                 signals_up[x]+1,
-                signals_bak[mini_grid_dim*(mini_grid_dim-1)+x]
+                signals_bak[x][0]
               );
             }
           }
         }
       }
     }
+    // std::cout << std::endl;
 
     // bottom
     for(size_t x = 0; x < mini_grid_dim; ++x) {
+      // std::cout << x << "," << 0 << ":" << channels_down[x] << std::endl;
       if (signals_down[x] >= 0) {
-        if (channels_down[x] == channelIDs[x]) {
-          if (signals[x] == -1) {
-            if (signals_bak[x] == -1) {
-              signals_bak[x] = signals_down[x]+1;
-            } else if (signals_bak[x] >= 0) {
-              signals_bak[x] =
+        if (channels_down[x] == channelIDs[x][mini_grid_dim-1]) {
+          if (signals[x][mini_grid_dim-1] == -1) {
+            if (signals_bak[x][mini_grid_dim-1] == -1) {
+              signals_bak[x][mini_grid_dim-1] = signals_down[x]+1;
+            } else if (signals_bak[x][mini_grid_dim-1] >= 0) {
+              signals_bak[x][mini_grid_dim-1] =
               std::min(
                 signals_down[x]+1,
-                signals_bak[x]
+                signals_bak[x][mini_grid_dim-1]
               );
             }
           }
         }
       }
     }
+    // std::cout << std::endl;
 
     // seed events
     if (update%((int)config.WAVE_SIZE()+1) == 0) {
@@ -548,7 +571,7 @@ int main(int argc, char *argv[])
 
       for(size_t x = startx; x < mini_grid_dim; x+=waveskip) {
         for(size_t y = starty; y < mini_grid_dim; y+=waveskip) {
-          if (signals[x+y*mini_grid_dim] == -1) signals_bak[x+y*mini_grid_dim] = 0;
+          if (signals[x][y] == -1) signals_bak[x][y] = 0;
         }
       }
     }
@@ -656,11 +679,6 @@ int main(int argc, char *argv[])
 
   cmemspace = H5Screate_simple(2, dimens_2d, NULL);
 
-  double **datapointers = new double*[mini_grid_dim*mini_grid_dim];
-  for (size_t i = 0; i < mini_grid_dim; ++i) {
-    datapointers[i] = stockpiles + i*mini_grid_dim;
-  }
-
   cdataset = H5Dcreate(
       file_identifier,
       "data",
@@ -679,7 +697,7 @@ int main(int argc, char *argv[])
           cmemspace,
           cdataspace,
           H5P_DEFAULT,
-          &(datapointers[0][0])
+          stockpiles_buf
         );
     }
     MPI_Barrier(comm_cart);
@@ -692,7 +710,7 @@ int main(int argc, char *argv[])
   H5Fclose(file_identifier);
 
   // Finalize the MPI environment.
-  MPI_Type_free(&verticalEdge);
+  MPI_Type_free(&horizontalEdge);
   MPI_Finalize();
 
   return 0;
