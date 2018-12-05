@@ -711,20 +711,14 @@ int main(int argc, char *argv[])
     }
 
 
-  for(int r = 0; r < world_size; ++r){
-    if(rank_2d == r) {
-      H5Dwrite(
-          cdataset,
-          H5T_NATIVE_DOUBLE,
-          cmemspace,
-          cdataspace,
-          H5P_DEFAULT,
-          stockpiles_out_buf
-        );
-    }
-    MPI_Barrier(comm_cart);
-  }
-
+  H5Dwrite(
+      cdataset,
+      H5T_NATIVE_DOUBLE,
+      cmemspace,
+      cdataspace,
+      H5P_DEFAULT,
+      stockpiles_out_buf
+    );
 
   H5Sclose(cmemspace);
   H5Sclose(cdataspace);
