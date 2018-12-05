@@ -246,7 +246,8 @@ int main(int argc, char *argv[])
   // do work
   double target_walltime = get_walltime() + config.RUN_DURATION();
   int bcast_breaker = true;
-  for(size_t update = 0; bcast_breaker; ++update) {
+  size_t update = 0;
+  for(update = 0; bcast_breaker; ++update) {
     // handle periphery send/recieve
     // left
     MPI_Isend(
@@ -610,20 +611,24 @@ int main(int argc, char *argv[])
   }
 
 
-  for(int r = 0; r < world_size; ++r){
-    if(rank_2d == r) {
-      printf("I am %d: (%d,%d); originally %d\n",rank_2d,coord_2d[0],coord_2d[1],world_rank);
-
-      for (size_t y = 0; y < mini_grid_dim; ++y) {
-        for (size_t x = 0; x < mini_grid_dim; ++x) {
-          std::cout << channelIDs[x][y] << " ";
-        }
-        std::cout << std::endl;
-      }
-      std::cout << std::endl;
-    }
-    MPI_Barrier(comm_cart);
+  if(rank_2d == 0) {
+    std::cout << "elapsed updates: " << update << std::endl;
   }
+
+  // for(int r = 0; r < world_size; ++r){
+  //   if(rank_2d == r) {
+  //     printf("I am %d: (%d,%d); originally %d\n",rank_2d,coord_2d[0],coord_2d[1],world_rank);
+  //
+  //     for (size_t y = 0; y < mini_grid_dim; ++y) {
+  //       for (size_t x = 0; x < mini_grid_dim; ++x) {
+  //         std::cout << channelIDs[x][y] << " ";
+  //       }
+  //       std::cout << std::endl;
+  //     }
+  //     std::cout << std::endl;
+  //   }
+  //   MPI_Barrier(comm_cart);
+  // }
 
 
 
@@ -647,7 +652,7 @@ int main(int argc, char *argv[])
 
   H5Pclose(acc_template);
 
-  printf("writing out proc %d, 0,0\n", rank_2d);
+  // printf("writing out proc %d, 0,0\n", rank_2d);
 
   hid_t cdataspace, cmemspace, cdataset;
   hsize_t dimens_2d[2];
