@@ -609,13 +609,22 @@ int main(int argc, char *argv[])
     //
   }
 
-  // for (size_t y = 0; y < mini_grid_dim; ++y) {
-  //   for (size_t x = 0; x < mini_grid_dim; ++x) {
-  //     std::cout << channelIDs[x+mini_grid_dim*y] << " ";
-  //   }
-  //   std::cout << std::endl;
-  // }
-  // std::cout << std::endl;
+
+  for(int r = 0; r < world_size; ++r){
+    if(rank_2d == r) {
+      printf("I am %d: (%d,%d); originally %d\n",rank_2d,coord_2d[0],coord_2d[1],world_rank);
+
+      for (size_t y = 0; y < mini_grid_dim; ++y) {
+        for (size_t x = 0; x < mini_grid_dim; ++x) {
+          std::cout << channelIDs[x][y] << " ";
+        }
+        std::cout << std::endl;
+      }
+      std::cout << std::endl;
+    }
+    MPI_Barrier(comm_cart);
+  }
+
 
 
   // for (size_t i = 0; i < mini_grid_dim*mini_grid_dim; ++i) {
@@ -653,8 +662,9 @@ int main(int argc, char *argv[])
   hsize_t count_2d[2];
   hsize_t block_2d[2];
 
-  start_2d[0] = mini_grid_dim * coord_2d[0];
-  start_2d[1] = mini_grid_dim * coord_2d[1];
+  // we're printing out a transpose, so need to transpose
+  start_2d[0] = mini_grid_dim * coord_2d[1];
+  start_2d[1] = mini_grid_dim * coord_2d[0];
 
   // stride_2d[0] = 1;
   // stride_2d[1] = 1;
@@ -689,6 +699,18 @@ int main(int argc, char *argv[])
       H5P_DEFAULT
     );
 
+    double* stockpiles_out_buf = new double[mini_grid_dim*mini_grid_dim];
+    double** stockpiles_out = new double*[mini_grid_dim];
+    for(size_t i = 0; i < mini_grid_dim; ++i) {
+      stockpiles_out[i] = &stockpiles_out_buf[i*mini_grid_dim];
+    }
+    for(size_t x = 0; x < mini_grid_dim; ++x) {
+      for(size_t y = 0; y < mini_grid_dim; ++y) {
+        stockpiles_out[x][y] = stockpiles[y][x];
+      }
+    }
+
+
   for(int r = 0; r < world_size; ++r){
     if(rank_2d == r) {
       H5Dwrite(
@@ -697,7 +719,7 @@ int main(int argc, char *argv[])
           cmemspace,
           cdataspace,
           H5P_DEFAULT,
-          stockpiles_buf
+          stockpiles_out_buf
         );
     }
     MPI_Barrier(comm_cart);
