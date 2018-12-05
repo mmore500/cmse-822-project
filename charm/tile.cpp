@@ -132,7 +132,11 @@ void Tile::seedGen(double lastSeedGenTime) {
   if (curTime > RUN_DURATION) {
     mainProxy.done(thisIndex, stockpile, updateCount);
   } else {
-    thisProxy[thisIndex].seedGen(curTime);
+    if ((thisIndex%2)==0) {
+      thisProxy[thisIndex+1].seedGen(curTime);
+    } else {
+      thisProxy[thisIndex-1].seedGen(curTime);
+    }
   }
 
 }
