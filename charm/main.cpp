@@ -59,6 +59,9 @@ Main::Main(CkArgMsg* msg) {
   doneCount = 0;
   numElements = GRID_WIDTH * GRID_HEIGHT;
 
+  result = new double[numElements];
+  updateCounts = new size_t[numElements];
+
   // display info about this execution
   CkPrintf("Running Tile World with %d elements "
             "using %d processors.\n",
@@ -94,7 +97,7 @@ Main::Main(CkArgMsg* msg) {
 
   for( size_t x = 0; x < GRID_WIDTH; ++x) {
     for( size_t y = 0; y < GRID_HEIGHT; ++y) {
-      tileArray[x+y*GRID_WIDTH].setChan(parsedCsv[y][x]);
+      tileArray[x*GRID_HEIGHT+y].setChan(parsedCsv[y][x]);
     }
   }
 
@@ -108,16 +111,16 @@ Main::Main(CkArgMsg* msg) {
 Main::Main(CkMigrateMessage* msg) {}
 
 // increment the doneCount
-void Main::done(size_t which, double amount) {
+void Main::done(size_t which, double amount, size_t updateCount) {
   // if everyone done, exit
   ++doneCount;
 
   result[which] = amount;
+  updateCounts[which] = updateCount;
 
   // otherwise, keep waiting
   if (doneCount >= numElements) {
 
-    CkPrintf("test1");
     std::fstream fs;
     fs.open("output.csv", std::fstream::out);
 
@@ -129,7 +132,14 @@ void Main::done(size_t which, double amount) {
       fs << '\n';
     }
 
-    CkPrintf("test");
+    fs.close();
+
+    fs.open("updates.csv", std::fstream::out);
+
+    for (size_t i = 0; i < numElements; ++i) {
+        fs << updateCounts[i] << std::endl;
+    }
+
     fs.close();
     CkExit();
   }

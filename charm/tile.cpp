@@ -89,20 +89,22 @@ void Tile::setChan(size_t channelID){
 /* Seed resource waves */
 void Tile::seedGen(double lastSeedGenTime) {
 
+  ++updateCount;
+
   double curTime = CkWallTimer();
 
   double elapsedTime = curTime - lastSeedGenTime;
 
   // no-op if tile dead or no time elapsed
-  if (elapsedTime && channelID) {
+  if (/*elapsedTime &&*/ channelID) {
 
     // generate as many seed events as appropriate ...
     // ... given elapsed time and whim of RNG
-    for (double draw = exp_dist(generator);
-        draw < elapsedTime;
-        elapsedTime -= draw, draw = exp_dist(generator)
-      )
-    {
+    // for (double draw = exp_dist(generator);
+    //     draw < elapsedTime;
+    //     elapsedTime -= draw, draw = exp_dist(generator)
+    //   )
+    // {
 
       // CkPrintf("seed!\n");
 
@@ -121,14 +123,14 @@ void Tile::seedGen(double lastSeedGenTime) {
           );
       }
 
-    }
+    // }
 
   }
 
   // if the simulation is over, tell main we're done and stop
   // otherwise, queue next iteration of wave seeding loop
   if (curTime > RUN_DURATION) {
-    mainProxy.done(thisIndex, stockpile);
+    mainProxy.done(thisIndex, stockpile, updateCount);
   } else {
     thisProxy[thisIndex].seedGen(curTime);
   }

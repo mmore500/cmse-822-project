@@ -5,8 +5,8 @@
 
 EMP_BUILD_CONFIG(Config,
   GROUP(WORLD_STRUCTURE, "How should the world be setup?"),
-  VALUE(GRID_WIDTH, size_t, 4, "How wide is the World?"),
-  VALUE(GRID_HEIGHT, size_t, 4, "How tall is the World? (should equal GRID_WIDTH)"),
+  VALUE(GRID_WIDTH, size_t, 24, "How wide is the World?"),
+  VALUE(GRID_HEIGHT, size_t, 24, "How tall is the World? (should equal GRID_WIDTH)"),
 
   GROUP(RUN_STRUCTURE, "How should the run be setup?"),
   VALUE(RUN_DURATION, double, 10.0, "How long should a run last (seconds)?"),

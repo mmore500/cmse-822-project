@@ -9,7 +9,8 @@ class Main : public CBase_Main {
     // aka Object State
     size_t doneCount;
     size_t numElements;
-    double result[100];
+    double* result;
+    size_t* updateCounts;
 
   public:
 
@@ -18,7 +19,7 @@ class Main : public CBase_Main {
     Main(CkMigrateMessage* msg);
 
     /* Entry Methods */
-    void done(size_t which, double amount);
+    void done(size_t which, double amount, size_t updateCount);
 
 };
 

@@ -17,7 +17,7 @@ mainmodule main {
 
   mainchare Main {
     entry Main(CkArgMsg* msg);
-    entry void done(size_t which, double amount);
+    entry void done(size_t which, double amount, size_t updateCount);
   };
 
 };
