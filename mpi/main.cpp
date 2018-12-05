@@ -192,10 +192,11 @@ int main(int argc, char *argv[])
   * Allocate two dimensional array of pointers to rows in the data
   * elements.
   */
+  int *buf = new int [(h5dims[0]*h5dims[1])];
   int **rdata = new int* [h5dims[0]];
 
   for(size_t x = 0; x < h5dims[0]; ++x) {
-    rdata[x] = new int [h5dims[1]];
+    rdata[x] = &buf[x*h5dims[1]];
   }
 
   /*
@@ -398,24 +399,39 @@ int main(int argc, char *argv[])
 
         if (signals[x+y*mini_grid_dim] >= 0) {
           signals_bak[x+y*mini_grid_dim] = -2;
-          for(int dx : {-1, 1, 0}) {
+
+          const int dxlis [4] = {-1,1,0,0};
+          const int dylis [4] = {0,0,1,-1};
+
+          for(size_t j = 0; j < 4; ++j) {
+
+            int dx = dxlis[j];
+            int dy = dylis[j];
+
             if (x+dx < 0 || x+dx >= mini_grid_dim) continue;
-            for(int dy : {(dx == 0) ? -1 : 0, (dx == 0) ? 1 : 0}) {
-              if (y+dy < 0 || y+dy >= mini_grid_dim) continue;
+            if (y+dy < 0 || y+dy >= mini_grid_dim) continue;
+
+            // std::cout << x << " " << y << "<>";
+            //   std::cout << x+dx << " " << y+dy << std::endl;
+            //   std::cout << signals[x+dx+(y+dy)*mini_grid_dim] << std::endl;
+            //   std::cout << channelIDs[x+dx+(y+dy)*mini_grid_dim] << std::endl;
+            //   std::cout << channelIDs[x+(y)*mini_grid_dim] << std::endl;
 
               if (signals[x+dx+(y+dy)*mini_grid_dim] == -1 && channelIDs[x+dx+(y+dy)*mini_grid_dim] == channelIDs[x+(y)*mini_grid_dim]) {
+                // std::cout << "!!" << x+dx << " " << y+dy << std::endl;
                 if (signals_bak[x+dx+(y+dy)*mini_grid_dim] == -1) {
                   signals_bak[x+dx+(y+dy)*mini_grid_dim] = signals[x+y*mini_grid_dim]+1;
+                  // std::cout << "a!" << x+dx << " " << y+dy << std::endl;
                 } else if (signals_bak[x+dx+(y+dy)*mini_grid_dim] >= 0) {
                   signals_bak[x+dx+(y+dy)*mini_grid_dim] =
                   std::min(
                     signals[x+y*mini_grid_dim]+1,
                     signals_bak[x+dx+(y+dy)*mini_grid_dim]
                   );
+                  // std::cout << "b!" << x+dx << " " << y+dy << std::endl;
                 }
               }
 
-            }
           }
           // distribute reward
           if(signals[x+y*mini_grid_dim] <= config.WAVE_SIZE()) {
@@ -559,7 +575,25 @@ int main(int argc, char *argv[])
       0, /* int root */
       comm_cart /* MPI_Comm comm */
     );
+
+    // for (size_t y = 0; y < mini_grid_dim; ++y) {
+    //   for (size_t x = 0; x < mini_grid_dim; ++x) {
+    //     std::cout << signals[x+mini_grid_dim*y] << " ";
+    //   }
+    //   std::cout << std::endl;
+    // }
+    // std::cout << std::endl;
+    //
   }
+
+  // for (size_t y = 0; y < mini_grid_dim; ++y) {
+  //   for (size_t x = 0; x < mini_grid_dim; ++x) {
+  //     std::cout << channelIDs[x+mini_grid_dim*y] << " ";
+  //   }
+  //   std::cout << std::endl;
+  // }
+  // std::cout << std::endl;
+
 
   // for (size_t i = 0; i < mini_grid_dim*mini_grid_dim; ++i) {
   //   stockpiles[i] = i;
