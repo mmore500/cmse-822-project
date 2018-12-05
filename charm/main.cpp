@@ -140,6 +140,13 @@ void Main::done(size_t which, double amount, size_t updateCount) {
         fs << updateCounts[i] << std::endl;
     }
 
+    double avg = 0;
+    for (size_t i = 0; i < numElements; ++i) {
+      avg += ((double) result[which]) / numElements;
+    }
+
+    std::cout << "average updates: " << avg << std::endl;
+
     fs.close();
     CkExit();
   }
