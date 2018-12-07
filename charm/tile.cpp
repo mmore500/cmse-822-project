@@ -34,6 +34,7 @@ constexpr Cardi::Dir Cardi::Opp[];
 /* main constuctor */
 Tile::Tile() {
 
+  upd = 0;
   // set up random number machinery
   generator.seed(thisIndex);
   exp_dist = std::exponential_distribution<double>(0.18);
@@ -89,7 +90,7 @@ void Tile::setChan(size_t channelID){
 /* Seed resource waves */
 void Tile::seedGen(double lastSeedGenTime) {
 
-  ++updateCount;
+  upd+=1;
 
   double curTime = CkWallTimer();
 
@@ -129,14 +130,11 @@ void Tile::seedGen(double lastSeedGenTime) {
 
   // if the simulation is over, tell main we're done and stop
   // otherwise, queue next iteration of wave seeding loop
-  if (curTime > RUN_DURATION) {
-    mainProxy.done(thisIndex, stockpile, updateCount);
+  if (CkWallTimer() > RUN_DURATION) {
+    CkPrintf("%d\n",upd);
+    mainProxy.done(thisIndex, stockpile, upd);
   } else {
-    if ((thisIndex%2)==0) {
-      thisProxy[thisIndex+1].seedGen(curTime);
-    } else {
-      thisProxy[thisIndex-1].seedGen(curTime);
-    }
+    thisProxy[(thisIndex+1)%(GRID_WIDTH*GRID_HEIGHT)].seedGen(curTime);
   }
 
 }

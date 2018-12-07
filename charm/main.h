@@ -10,7 +10,7 @@ class Main : public CBase_Main {
     size_t doneCount;
     size_t numElements;
     double* result;
-    size_t* updateCounts;
+    int* updateCounts;
 
   public:
 
@@ -19,7 +19,7 @@ class Main : public CBase_Main {
     Main(CkMigrateMessage* msg);
 
     /* Entry Methods */
-    void done(size_t which, double amount, size_t updateCount);
+    void done(size_t which, double amount, int updateCount);
 
 };
 

@@ -11,7 +11,7 @@ private:
   size_t channelID;
   size_t x;
   size_t y;
-  size_t updateCount = 0;
+  int upd;
 
   /* RNG stuff */
   std::mt19937 generator;

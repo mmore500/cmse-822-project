@@ -60,7 +60,7 @@ Main::Main(CkArgMsg* msg) {
   numElements = GRID_WIDTH * GRID_HEIGHT;
 
   result = new double[numElements];
-  updateCounts = new size_t[numElements];
+  updateCounts = new int[numElements];
 
   // display info about this execution
   CkPrintf("Running Tile World with %d elements "
@@ -101,8 +101,6 @@ Main::Main(CkArgMsg* msg) {
     }
   }
 
-  // invoke the seedGen() entry method on all of the
-  // elements in the tileArray array of chare objects
   tileArray.seedGen(0.0);
 
 }
@@ -111,12 +109,13 @@ Main::Main(CkArgMsg* msg) {
 Main::Main(CkMigrateMessage* msg) {}
 
 // increment the doneCount
-void Main::done(size_t which, double amount, size_t updateCount) {
-  // if everyone done, exit
-  ++doneCount;
+void Main::done(size_t which, double amount, int updateCount) {
 
   result[which] = amount;
-  updateCounts[which] = updateCount;
+  updateCounts[doneCount] = updateCount;
+
+  // if everyone done, exit
+  ++doneCount;
 
   // otherwise, keep waiting
   if (doneCount >= numElements) {
@@ -134,20 +133,21 @@ void Main::done(size_t which, double amount, size_t updateCount) {
 
     fs.close();
 
-    fs.open("updates.csv", std::fstream::out);
+    std::fstream fs2;
+    fs2.open("updates.csv", std::fstream::out);
 
     for (size_t i = 0; i < numElements; ++i) {
-        fs << updateCounts[i] << std::endl;
+      fs2 << updateCounts[i] << std::endl;
     }
+    fs2.close();
 
     double avg = 0;
     for (size_t i = 0; i < numElements; ++i) {
-      avg += ((double) result[which]) / numElements;
+      avg += ((double) updateCounts[i]) / numElements;
     }
 
     std::cout << "average updates: " << avg << std::endl;
 
-    fs.close();
     CkExit();
   }
 }
