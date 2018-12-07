@@ -131,10 +131,11 @@ void Tile::seedGen(double lastSeedGenTime) {
   // if the simulation is over, tell main we're done and stop
   // otherwise, queue next iteration of wave seeding loop
   if (CkWallTimer() > RUN_DURATION) {
-    CkPrintf("%d\n",upd);
+    // CkPrintf("%d\n",upd);
     mainProxy.done(thisIndex, stockpile, upd);
   } else {
-    thisProxy[(thisIndex+1)%(GRID_WIDTH*GRID_HEIGHT)].seedGen(curTime);
+    //thisProxy[thisIndex+1)%(GRID_WIDTH*GRID_HEIGHT)].seedGen(curTime);
+    thisProxy[thisIndex].seedGen(curTime);
   }
 
 }
